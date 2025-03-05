@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,9 +7,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { FaCircleExclamation } from "react-icons/fa6";
 import { Link, useNavigate } from "react-router-dom";
+import { signInStart, signInSuccess, signInFailure } from "../redux/auth/authSlice";
 
 export default function LogIn({ className, ...props }) {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const { loading, error: reduxError } = useSelector((state) => state.auth);
+  
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -26,6 +31,7 @@ export default function LogIn({ className, ...props }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+    dispatch(signInStart());
 
     try {
       const response = await fetch("/api/auth/login", {
@@ -39,13 +45,17 @@ export default function LogIn({ className, ...props }) {
         }),
       });
 
+      const data = await response.json();
+      console.log("Login API Response:", data);
+
       if (!response.ok) {
-        const data = await response.json();
         throw new Error(data.message || "Failed to log in");
       }
 
-      navigate("/");
+      dispatch(signInSuccess(data));
+      navigate("/dashboard", { replace: true });
     } catch (err) {
+      dispatch(signInFailure(err.message));
       setError(err.message);
     }
   };
@@ -89,8 +99,8 @@ export default function LogIn({ className, ...props }) {
                       </div>
                     )}
                   </div>
-                  <Button type="submit" className="w-full">
-                    Log In
+                  <Button type="submit" className="w-full" disabled={loading}>
+                    {loading ? "Logging in..." : "Log In"}
                   </Button>
                 </div>
                 <div className="mt-4 text-center text-sm">

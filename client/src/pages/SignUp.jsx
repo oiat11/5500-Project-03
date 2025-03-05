@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,9 +7,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { FaCircleExclamation } from "react-icons/fa6";
 import { Link, useNavigate } from "react-router-dom";
+import { signInStart, signInSuccess, signInFailure } from "../redux/auth/authSlice";
 
 export default function SignUp({ className, ...props }) {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const { loading, error: reduxError } = useSelector((state) => state.auth);
+
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -34,6 +39,8 @@ export default function SignUp({ className, ...props }) {
       return;
     }
 
+    dispatch(signInStart());
+
     try {
       const response = await fetch("/api/auth/signup", {
         method: "POST",
@@ -47,13 +54,16 @@ export default function SignUp({ className, ...props }) {
         }),
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        const data = await response.json();
         throw new Error(data.message || "Failed to sign up");
       }
 
-      navigate("/login");
+      dispatch(signInSuccess(data));
+      navigate("/dashboard", { replace: true });
     } catch (err) {
+      dispatch(signInFailure(err.message));
       setError(err.message);
     }
   };
@@ -119,8 +129,8 @@ export default function SignUp({ className, ...props }) {
     
                 )}
                   </div>
-                  <Button type="submit" className="w-full">
-                    Sign Up
+                  <Button type="submit" className="w-full" disabled={loading}>
+                    {loading ? "Creating account..." : "Sign Up"}
                   </Button>
                 </div>
                 <div className="mt-4 text-center text-sm">
