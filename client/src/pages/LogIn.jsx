@@ -7,13 +7,11 @@ import { Label } from "@/components/ui/label";
 import { FaCircleExclamation } from "react-icons/fa6";
 import { Link, useNavigate } from "react-router-dom";
 
-export default function SignUp({ className, ...props }) {
+export default function LogIn({ className, ...props }) {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
-    name: "",
     email: "",
     password: "",
-    confirmPassword: "",
   });
   const [error, setError] = useState("");
 
@@ -29,19 +27,13 @@ export default function SignUp({ className, ...props }) {
     e.preventDefault();
     setError("");
 
-    if (formData.password !== formData.confirmPassword) {
-      setError("Those passwords did not match. Try again.");
-      return;
-    }
-
     try {
-      const response = await fetch("/api/auth/signup", {
+      const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          username: formData.name,
           email: formData.email,
           password: formData.password,
         }),
@@ -49,10 +41,10 @@ export default function SignUp({ className, ...props }) {
 
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.message || "Failed to sign up");
+        throw new Error(data.message || "Failed to log in");
       }
 
-      navigate("/login");
+      navigate("/");
     } catch (err) {
       setError(err.message);
     }
@@ -64,23 +56,12 @@ export default function SignUp({ className, ...props }) {
         <div className={cn("flex flex-col gap-6", className)} {...props}>
           <Card>
             <CardHeader>
-              <CardTitle className="text-2xl">Create an account</CardTitle>
-              <CardDescription>Enter your details to create a new account</CardDescription>
+              <CardTitle className="text-2xl">Welcome back</CardTitle>
+              <CardDescription>Enter your email below to login to your account</CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit}>
                 <div className="flex flex-col gap-6">
-                  <div className="grid gap-2">
-                    <Label htmlFor="name">Full Name</Label>
-                    <Input
-                      id="name"
-                      type="text"
-                      placeholder="Enter your name"
-                      required
-                      value={formData.name}
-                      onChange={handleChange}
-                    />
-                  </div>
                   <div className="grid gap-2">
                     <Label htmlFor="email">Email</Label>
                     <Input
@@ -101,32 +82,22 @@ export default function SignUp({ className, ...props }) {
                       value={formData.password}
                       onChange={handleChange}
                     />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="confirmPassword">Confirm Password</Label>
-                    <Input
-                      id="confirmPassword"
-                      type="password"
-                      required
-                      value={formData.confirmPassword}
-                      onChange={handleChange}
-                    />
                     {error && (
-      <div className="mb-4 text-sm text-red-600 mt-3 flex items-center">
-      <FaCircleExclamation className="mr-2" />
-      {error}
-    </div>
-    
-                )}
+                      <div className="mb-4 text-sm text-red-600 mt-3 flex items-center">
+                        <FaCircleExclamation className="mr-2" />
+                        {error}
+                      </div>
+                    )}
                   </div>
                   <Button type="submit" className="w-full">
-                    Sign Up
+                    Log In
                   </Button>
                 </div>
                 <div className="mt-4 text-center text-sm">
-                  Already have an account?{" "}
-                  <Link to="/login" className="underline underline-offset-4">Login</Link>
-
+                  Don't have an account?{" "}
+                  <Link to="/signup" className="underline underline-offset-4">
+                    Sign up
+                  </Link>
                 </div>
               </form>
             </CardContent>
