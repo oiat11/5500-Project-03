@@ -53,7 +53,7 @@ export default function LogIn({ className, ...props }) {
       }
 
       dispatch(signInSuccess(data));
-      navigate("/dashboard", { replace: true });
+      navigate("/donors", { replace: true });
     } catch (err) {
       dispatch(signInFailure(err.message));
       setError(err.message);

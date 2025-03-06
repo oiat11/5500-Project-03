@@ -47,7 +47,7 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter>
-        <p className="text-xs text-gray-500 text-center">© 2024 DLAS</p>
+        <p className="text-xs text-gray-500 text-center">© 2025 Donor List Automation System</p>
       </SidebarFooter>
     </Sidebar>
   )
