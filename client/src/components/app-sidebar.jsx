@@ -1,5 +1,6 @@
 import React from "react"
 import { Link, useLocation } from "react-router-dom"
+import { useSelector } from "react-redux"
 import {
   Sidebar,
   SidebarContent,
@@ -7,10 +8,12 @@ import {
   SidebarGroup,
   SidebarHeader,
 } from "./ui/sidebar"
+import { Avatar, AvatarImage, AvatarFallback } from "./ui/avatar"
 import { Users, Calendar } from "lucide-react" 
 
 export function AppSidebar() {
   const location = useLocation();
+  const { currentUser } = useSelector((state) => state.auth);
   
   const menuItems = [
     {
@@ -27,8 +30,19 @@ export function AppSidebar() {
 
   return (
     <Sidebar>
-      <SidebarHeader>
-        <h2 className="text-lg font-semibold">Donor List Automation System</h2>
+      <SidebarHeader className="pt-6">
+        <div className="flex items-center gap-3 px-2">
+          <Avatar className="h-8 w-8 rounded-lg">
+            <AvatarImage src={currentUser?.avatar} alt={currentUser?.username} />
+            <AvatarFallback className="rounded-lg">
+              {currentUser?.username?.slice(0, 2)?.toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+          <div className="grid flex-1 text-left text-sm leading-tight">
+            <span className="truncate font-semibold">{currentUser?.username}</span>
+            <span className="truncate text-xs text-muted-foreground">{currentUser?.email}</span>
+          </div>
+        </div>
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>

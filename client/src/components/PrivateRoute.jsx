@@ -7,9 +7,8 @@ export default function PrivateRoute() {
   console.log("PrivateRoute - currentUser:", currentUser);
   console.log("PrivateRoute - loading:", loading);
 
-  // Show loading state or return null while checking auth
   if (loading) {
-    return null; // or a loading spinner
+    return null;
   }
 
   return currentUser ? <Outlet /> : <Navigate to="/login" replace />;
