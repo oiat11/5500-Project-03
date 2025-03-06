@@ -8,6 +8,7 @@ import SignUp from './pages/SignUp'
 import Donors from './pages/Donors'
 import Events from './pages/Events'
 import PrivateRoute from './components/PrivateRoute'
+import Settings from './pages/Settings'
 
 function App() {
   return (
@@ -35,6 +36,7 @@ function App() {
           }>
             <Route path="/donors" element={<Donors />} />
             <Route path="/events" element={<Events />} />
+            <Route path="/settings" element={<Settings />} />
           </Route>
         </Route>
       </Routes>
