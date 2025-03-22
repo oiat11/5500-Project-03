@@ -5,11 +5,14 @@ import App from './App.jsx'
 import { Provider } from 'react-redux'
 import { PersistGate } from 'redux-persist/integration/react'
 import { persistor, store } from './redux/store.js'
+import { ToastProvider } from './components/ui/toast.jsx'
 
 createRoot(document.getElementById('root')).render(
   <Provider store={store}>
     <PersistGate persistor={persistor}>
-      <App />
+      <ToastProvider>
+        <App />
+      </ToastProvider>
     </PersistGate>
   </Provider>,
 )

@@ -22,43 +22,176 @@ model User {
   createdAt DateTime @default(now())
 }
 
-model Donor {
-  donor_id                    String   @id @default(uuid()) @db.Char(36)
-  first_name                  String   @db.VarChar(255)
-  middle_name                 String?  @db.VarChar(255)
-  last_name                   String   @db.VarChar(255)
-  gender                      String?
-  age                         Int?
-  email                       String?  @unique @db.VarChar(255)
-  phone_number                String?  @db.VarChar(20)
-  address                     String?
-  registration_date           DateTime @default(now())
-  last_donation_date          DateTime?
-  total_donation_amount       Decimal  @default(0.0) @db.Decimal(10,2)
-  total_donations_count       Int      @default(0)
-  anonymous_donation_preference Boolean @default(false)
-  interest_domain             String?
-  is_merged                   Boolean  @default(false)
-  is_company                  Boolean  @default(false)
-  merge_to_donor_id           String?  @db.Char(36)
-  communication_preference    String?
-  createdAt                   DateTime @default(now())
-  tags                        DonorTag[]
+model Donation {
+  id                 String      @id @default(uuid())
+  amount             Decimal     @db.Decimal(10, 2)
+  donation_date      DateTime
+  donorsLastDonation Donor[]     @relation("LastDonation")
+  donors             DonorDonation[]
+  donation_type      String?     @db.VarChar(50) // one-time, recurring, monthly, etc.
+  payment_method     String?     @db.VarChar(100)
+  status             String      @default("completed") @db.VarChar(50) // pending, completed, refunded, failed
+  campaign_id        String?     // Reference to campaign when implemented
+  event_id           String?     // Reference to event when implemented
+  notes              String?     @db.Text
+  is_anonymous       Boolean     @default(false)
+  is_deleted         Boolean     @default(false)
+  deleted_at         DateTime?
+  created_at         DateTime    @default(now())
+  updated_at         DateTime    @updatedAt
+
+  @@map("Donation")
+  @@index([donation_date])
+  @@index([campaign_id])
+  @@index([event_id])
+  @@index([status])
 }
 
 model Tag {
-  tag_id    String @id @default(uuid()) @db.Char(36)
-  name      String @unique @db.VarChar(255)
-  createdAt DateTime @default(now())
-  donors    DonorTag[]
+  id                String      @id @default(uuid())
+  name              String      @unique
+  description       String?     @db.Text
+  color             String?     @db.VarChar(20)  // For UI color coding
+  donors            DonorTag[]
+  is_deleted        Boolean     @default(false)
+  deleted_at        DateTime?
+  created_at        DateTime    @default(now())
+  updated_at        DateTime    @updatedAt
+
+  @@map("Tag")
+  @@index([name])
+}
+
+model Donor {
+  id                      String      @id @default(uuid())
+  first_name              String?     @db.VarChar(255)
+  nick_name               String?     @db.VarChar(255)
+  last_name               String?     @db.VarChar(255)
+  organization_name       String?     @db.VarChar(255)
+  gender                  String?     @db.VarChar(50)
+  age                     Int?        @db.Int
+  email                   String?     @unique @db.VarChar(255)
+  phone_number            String?     @db.VarChar(50)
+  address                 String?     @db.Text
+  city                    String?     @db.Text
+  state                   String?     @db.VarChar(100)
+  postal_code             String?     @db.VarChar(20)
+  country                 String?     @db.VarChar(100)
+  registration_date       DateTime?
+  last_donation           Donation?   @relation("LastDonation", fields: [last_donation_id], references: [id], onDelete: SetNull)
+  last_donation_id        String?     
+  donations               DonorDonation[]
+  total_donation_amount   Decimal     @default(0) @db.Decimal(10, 2)
+  total_donations_count   Int         @default(0)
+  anonymous_donation_preference Boolean @default(false)
+  interest_domains        DonorInterestDomain[]
+  is_merged               Boolean     @default(false)
+  is_company              Boolean     @default(false)
+  merge_to_donor          Donor?      @relation("DonorMerge", fields: [merge_to_donor_id], references: [id], onDelete: SetNull)
+  merge_to_donor_id       String?
+  merged_donors           Donor[]     @relation("DonorMerge")
+  contact_phone_type      String?     
+  phone_restrictions      String?
+  email_restrictions      String?
+  communication_restrictions String?
+  subscription_events_in_person String?
+  subscription_events_magazine String?
+  communication_preference String?
+  tags                    DonorTag[]
+  communications          Communication[]
+  is_deleted              Boolean     @default(false)
+  deleted_at              DateTime?
+  created_at              DateTime    @default(now())
+  updated_at              DateTime    @updatedAt
+
+  @@map("Donor")
+  @@index([email])
+  @@index([phone_number])
+  @@index([last_donation_id])
+  @@index([is_company])
+  @@index([is_merged])
+  @@index([merge_to_donor_id])
+  @@index([is_deleted])
+}
+
+model DonorDonation {
+  donor              Donor       @relation(fields: [donor_id], references: [id], onDelete: Cascade)
+  donor_id           String
+  donation           Donation    @relation(fields: [donation_id], references: [id], onDelete: Cascade)
+  donation_id        String
+  amount             Decimal     @db.Decimal(10, 2) // Amount attributed to this donor (for shared donations)
+  is_primary         Boolean     @default(true)     // For cases when multiple donors contributed
+  created_at         DateTime    @default(now())
+  updated_at         DateTime    @updatedAt
+
+  @@id([donor_id, donation_id])
+  @@map("Donor_Donation")
+  @@index([donor_id])
+  @@index([donation_id])
 }
 
 model DonorTag {
-  donor_id  String @db.Char(36)
-  tag_id    String @db.Char(36)
-  createdAt DateTime @default(now())
-  donor     Donor @relation(fields: [donor_id], references: [donor_id], onDelete: Cascade)
-  tag       Tag   @relation(fields: [tag_id], references: [tag_id], onDelete: Cascade)
-  
+  donor              Donor       @relation(fields: [donor_id], references: [id], onDelete: Cascade)
+  donor_id           String
+  tag                Tag         @relation(fields: [tag_id], references: [id], onDelete: Cascade)
+  tag_id             String
+  created_at         DateTime    @default(now())
+
   @@id([donor_id, tag_id])
+  @@map("Donor_Tag")
+  @@index([donor_id])
+  @@index([tag_id])
 }
+
+model InterestDomain {
+  id                String      @id @default(uuid())
+  name              String      @unique
+  description       String?     @db.Text
+  donors            DonorInterestDomain[]
+  created_at        DateTime    @default(now())
+  updated_at        DateTime    @updatedAt
+
+  @@map("Interest_Domain")
+  @@index([name])
+}
+
+model DonorInterestDomain {
+  donor             Donor       @relation(fields: [donor_id], references: [id], onDelete: Cascade)
+  donor_id          String
+  interest_domain   InterestDomain @relation(fields: [interest_domain_id], references: [id], onDelete: Cascade)
+  interest_domain_id String
+  level             Int         @default(1) // Interest level: 1-5
+  created_at        DateTime    @default(now())
+  updated_at        DateTime    @updatedAt
+
+  @@id([donor_id, interest_domain_id])
+  @@map("Donor_Interest_Domain")
+  @@index([donor_id])
+  @@index([interest_domain_id])
+}
+
+model Communication {
+  id                String      @id @default(uuid())
+  donor             Donor       @relation(fields: [donor_id], references: [id], onDelete: Cascade)
+  donor_id          String
+  type              String      @db.VarChar(50) // email, phone, mail, in-person
+  direction         String      @db.VarChar(20) // incoming, outgoing
+  subject           String?     @db.VarChar(255)
+  content           String?     @db.Text
+  status            String      @db.VarChar(50) // sent, received, failed, scheduled
+  communication_date DateTime
+  response_required Boolean     @default(false)
+  response_received Boolean     @default(false)
+  response_date     DateTime?
+  notes             String?     @db.Text
+  created_at        DateTime    @default(now())
+  updated_at        DateTime    @updatedAt
+
+  @@map("Communication")
+  @@index([donor_id])
+  @@index([communication_date])
+  @@index([type])
+  @@index([status])
+}
+
+
