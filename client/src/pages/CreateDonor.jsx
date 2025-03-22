@@ -20,7 +20,7 @@ export default function CreateDonor() {
     total_donation_amount: "",
     total_donations_count: "",
     anonymous_donation_preference: false,
-    interest_domain: "",
+    interest_domains: "",
     communication_preference: "",
   });
   const [successMessage, setSuccessMessage] = useState("");

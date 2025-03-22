@@ -7,6 +7,17 @@ import axios from 'axios';
 import { useToast } from "@/components/ui/toast";
 import { debounce } from 'lodash';
 import DonorFilters from '@/components/DonorFilters';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ChevronDown, ChevronUp, MoreHorizontal } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export default function Donors() {
   const navigate = useNavigate();
@@ -23,6 +34,11 @@ export default function Donors() {
     limit: 10,
     total: 0,
     totalPages: 0
+  });
+  const [selectedDonors, setSelectedDonors] = useState([]);
+  const [sorting, setSorting] = useState({
+    column: 'updated_at',
+    direction: 'desc'
   });
   
   // Handle CSV file upload
@@ -91,8 +107,8 @@ export default function Donors() {
         page,
         limit: pagination.limit,
         search,
-        sortBy: 'updated_at',
-        sortOrder: 'desc'
+        sortBy: sorting.column,
+        sortOrder: sorting.direction
       };
 
       // Add filter parameters
@@ -167,6 +183,115 @@ export default function Donors() {
     }
   };
 
+  // Handle row selection
+  const handleSelectRow = (donorId) => {
+    setSelectedDonors(prev => {
+      if (prev.includes(donorId)) {
+        return prev.filter(id => id !== donorId);
+      } else {
+        return [...prev, donorId];
+      }
+    });
+  };
+
+  // Handle select all rows
+  const handleSelectAll = () => {
+    if (selectedDonors.length === donors.length) {
+      setSelectedDonors([]);
+    } else {
+      setSelectedDonors(donors.map(donor => donor.id));
+    }
+  };
+
+  // Handle sort column
+  const handleSort = (column) => {
+    setSorting(prev => {
+      const newDirection = prev.column === column && prev.direction === 'asc' ? 'desc' : 'asc';
+      return {
+        column,
+        direction: newDirection
+      };
+    });
+    // Refetch with new sorting
+    fetchDonors(pagination.page, searchTerm, activeFilters);
+  };
+
+  // Render sort indicator
+  const renderSortIndicator = (column) => {
+    if (sorting.column !== column) return null;
+    return sorting.direction === 'asc' ? <ChevronUp className="ml-1 h-4 w-4" /> : <ChevronDown className="ml-1 h-4 w-4" />;
+  };
+
+  // Handle bulk actions
+  const handleBulkDelete = async () => {
+    if (selectedDonors.length === 0) return;
+    
+    if (confirm(`Are you sure you want to delete ${selectedDonors.length} donor(s)?`)) {
+      try {
+        setLoading(true);
+        await Promise.all(selectedDonors.map(id => 
+          axios.delete(`/api/donor/${id}`)
+        ));
+        
+        toast({
+          title: "Success",
+          description: `${selectedDonors.length} donor(s) deleted successfully.`,
+        });
+        
+        // Clear selection and refresh list
+        setSelectedDonors([]);
+        fetchDonors(pagination.page, searchTerm, activeFilters);
+      } catch (error) {
+        console.error('Error deleting donors:', error);
+        toast({
+          title: "Error",
+          description: "Failed to delete donors. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+  
+  const handleBulkExport = () => {
+    if (selectedDonors.length === 0) return;
+    
+    // Create CSV content
+    let csvContent = "data:text/csv;charset=utf-8,";
+    
+    // Add headers
+    csvContent += "ID,Name,Type,Email,Phone,City,State,Country,Total Donations,Tags\n";
+    
+    // Add rows for selected donors
+    selectedDonors.forEach(id => {
+      const donor = donors.find(d => d.id === id);
+      if (donor) {
+        const name = donor.is_company ? donor.organization_name : `${donor.first_name || ''} ${donor.last_name || ''}`;
+        const type = donor.is_company ? "Company" : "Individual";
+        const tags = donor.tags ? donor.tags.map(t => t.tag.name).join("|") : "";
+        
+        csvContent += `${donor.id},"${name}",${type},${donor.email || ''},${donor.phone_number || ''},`;
+        csvContent += `${donor.city || ''},${donor.state || ''},${donor.country || ''},`;
+        csvContent += `${donor.total_donation_amount || 0},"${tags}"\n`;
+      }
+    });
+    
+    // Create download link
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "selected_donors.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast({
+      title: "Export Complete",
+      description: `${selectedDonors.length} donor(s) exported to CSV.`,
+    });
+  };
+
   // Initial load
   useEffect(() => {
     fetchDonors();
@@ -182,9 +307,6 @@ export default function Donors() {
       <div className="flex items-center justify-between w-full mb-6">
         <h1 className="text-2xl font-bold whitespace-nowrap flex-shrink-0">Donors</h1>
         <div className="flex items-center gap-2">
-          <Button onClick={() => navigate("/donors/create")}>
-            Create Donor
-          </Button>
           <input
             type="file"
             ref={fileInputRef}
@@ -197,6 +319,9 @@ export default function Donors() {
             }
           }}>
             Import CSV
+          </Button>
+          <Button onClick={() => navigate("/donors/create")}>
+            Create Donor
           </Button>
         </div>
       </div>
@@ -226,60 +351,145 @@ export default function Donors() {
         availableFilters={availableFilters}
       />
 
-      {/* Donors List */}
-      <Card>
-        <CardContent className="p-4">
-          {loading ? (
-            <div className="text-center py-8">
-              Loading donors...
+      {/* Results Section */}
+      <div className="bg-white rounded-md shadow overflow-hidden">
+        <div className="flex justify-between items-center p-4 border-b">
+          <h2 className="text-lg font-semibold">Results Section</h2>
+          
+          {selectedDonors.length > 0 && (
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-500">
+                {selectedDonors.length} donor(s) selected
+              </span>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    Actions <ChevronDown className="ml-1 h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuLabel>Bulk Actions</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleBulkExport}>
+                    Export Selected
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleBulkDelete} className="text-red-600">
+                    Delete Selected
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
-          ) : donors.length === 0 ? (
-            <div className="text-center py-8">
-              No donors found. Try a different search or create a new donor.
-            </div>
-          ) : (
-            <div className="grid gap-4">
-              {donors.map((donor) => (
-                <Card 
-                  key={donor.id} 
-                  className="cursor-pointer hover:bg-slate-50"
-                  onClick={() => navigate(`/donors/${donor.id}`)}
-                >
-                  <CardContent className="p-4">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div>
-                        <h3 className="font-medium">
-                          {donor.is_company ? (
-                            donor.organization_name
-                          ) : (
-                            `${donor.first_name || ''} ${donor.last_name || ''}`
-                          )}
-                        </h3>
-                        <p className="text-sm text-gray-500">
-                          {donor.is_company ? "Company" : "Individual"}
-                        </p>
+          )}
+        </div>
+        
+        {loading ? (
+          <div className="text-center py-8">
+            Loading donors...
+          </div>
+        ) : donors.length === 0 ? (
+          <div className="text-center py-8">
+            No donors found. Try a different search or create a new donor.
+          </div>
+        ) : (
+          <div>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-12">
+                      <Checkbox 
+                        checked={selectedDonors.length === donors.length && donors.length > 0}
+                        onCheckedChange={handleSelectAll}
+                      />
+                    </TableHead>
+                    <TableHead onClick={() => handleSort('last_name')} className="cursor-pointer">
+                      <div className="flex items-center">
+                        Donor Name
+                        {renderSortIndicator('last_name')}
                       </div>
-                      <div>
-                        <p className="text-sm">{donor.email || "No email"}</p>
-                        <p className="text-sm">{donor.phone_number || "No phone"}</p>
-                        <p className="text-sm">
-                          {[donor.city, donor.state, donor.country]
-                            .filter(Boolean)
-                            .join(", ") || "No location"}
-                        </p>
+                    </TableHead>
+                    <TableHead onClick={() => handleSort('is_company')} className="cursor-pointer">
+                      <div className="flex items-center">
+                        Type
+                        {renderSortIndicator('is_company')}
                       </div>
-                      <div>
-                        <p className="text-sm">
-                          <span className="font-medium">Total Donations:</span> {donor.total_donation_amount
-                            ? `$${parseFloat(donor.total_donation_amount).toLocaleString()}`
-                            : "$0"}
-                        </p>
-                        <p className="text-sm">
-                          <span className="font-medium">Last Donation:</span> {donor.last_donation 
-                            ? new Date(donor.last_donation.donation_date).toLocaleDateString() 
-                            : "Never"}
-                        </p>
-                        <div className="flex flex-wrap gap-1 mt-1">
+                    </TableHead>
+                    <TableHead onClick={() => handleSort('age')} className="cursor-pointer">
+                      <div className="flex items-center">
+                        Age
+                        {renderSortIndicator('age')}
+                      </div>
+                    </TableHead>
+                    <TableHead>Contact Info</TableHead>
+                    <TableHead>Location</TableHead>
+                    <TableHead onClick={() => handleSort('total_donation_amount')} className="cursor-pointer">
+                      <div className="flex items-center">
+                        Total Donations
+                        {renderSortIndicator('total_donation_amount')}
+                      </div>
+                    </TableHead>
+                    <TableHead onClick={() => handleSort('last_donation_date')} className="cursor-pointer">
+                      <div className="flex items-center">
+                        Last Donation
+                        {renderSortIndicator('last_donation_date')}
+                      </div>
+                    </TableHead>
+                    <TableHead>Tags</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {donors.map((donor) => (
+                    <TableRow 
+                      key={donor.id}
+                      className="cursor-pointer hover:bg-slate-50"
+                      onClick={(e) => {
+                        // Prevent row click when checkbox is clicked
+                        if (e.target.type !== 'checkbox' && !e.target.closest('.checkbox-wrapper')) {
+                          navigate(`/donors/${donor.id}`);
+                        }
+                      }}
+                    >
+                      <TableCell className="checkbox-wrapper">
+                        <Checkbox 
+                          checked={selectedDonors.includes(donor.id)}
+                          onCheckedChange={() => handleSelectRow(donor.id)}
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        {donor.is_company ? (
+                          donor.organization_name
+                        ) : (
+                          `${donor.first_name || ''} ${donor.last_name || ''}`
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {donor.is_company ? "Company" : "Individual"}
+                      </TableCell>
+                      <TableCell>
+                        {donor.age || 'N/A'}
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm">{donor.email || "No email"}</div>
+                        <div className="text-sm">{donor.phone_number || "No phone"}</div>
+                      </TableCell>
+                      <TableCell>
+                        {[donor.city, donor.state, donor.country]
+                          .filter(Boolean)
+                          .join(", ") || "No location"}
+                      </TableCell>
+                      <TableCell>
+                        {donor.total_donation_amount
+                          ? `$${parseFloat(donor.total_donation_amount).toLocaleString()}`
+                          : "$0"}
+                      </TableCell>
+                      <TableCell>
+                        {donor.last_donation 
+                          ? new Date(donor.last_donation.donation_date).toLocaleDateString() 
+                          : "Never"}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1">
                           {donor.tags && donor.tags.length > 0 
                             ? donor.tags.slice(0, 3).map(tagRel => (
                                 <span 
@@ -298,42 +508,42 @@ export default function Donors() {
                             </span>
                           )}
                         </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Pagination */}
-      {!loading && pagination.totalPages > 1 && (
-        <div className="mt-4 flex justify-center">
-          <div className="flex items-center gap-2">
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={() => handlePageChange(pagination.page - 1)}
-              disabled={pagination.page === 1}
-            >
-              Previous
-            </Button>
-            <span className="px-4">
-              Page {pagination.page} of {pagination.totalPages}
-            </span>
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={() => handlePageChange(pagination.page + 1)}
-              disabled={pagination.page === pagination.totalPages}
-            >
-              Next
-            </Button>
+            
+            {/* Pagination */}
+            {pagination.totalPages > 1 && (
+              <div className="mt-4 py-2 border-t flex justify-center">
+                <div className="flex items-center gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => handlePageChange(pagination.page - 1)}
+                    disabled={pagination.page === 1}
+                  >
+                    Previous
+                  </Button>
+                  <span className="px-4">
+                    Page {pagination.page} of {pagination.totalPages}
+                  </span>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => handlePageChange(pagination.page + 1)}
+                    disabled={pagination.page === pagination.totalPages}
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

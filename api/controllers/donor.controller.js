@@ -10,15 +10,22 @@ export const createDonor = async (req, res) => {
       return res.status(401).json({ message: 'Unauthorized: Please log in' });
     }
 
+    console.log("Creating donor with data:", req.body);
+
     const {
       first_name,
       middle_name,
       last_name,
+      organization_name,
       gender,
       age,
       email,
       phone_number,
       address,
+      city,
+      state,
+      postal_code,
+      country,
       registration_date,
       last_donation_date,
       total_donation_amount,
@@ -31,16 +38,47 @@ export const createDonor = async (req, res) => {
       communication_preference
     } = req.body;
 
+    // Validation for required fields based on type
+    if (is_company && !organization_name) {
+      return res.status(400).json({ 
+        message: 'Organization name is required for company donors' 
+      });
+    }
+
+    if (!is_company && (!first_name || !last_name)) {
+      return res.status(400).json({ 
+        message: 'First name and last name are required for individual donors' 
+      });
+    }
+    
+    // Check if email already exists
+    if (email) {
+      const existingDonor = await prisma.donor.findUnique({
+        where: { email, is_deleted: false }
+      });
+      
+      if (existingDonor) {
+        return res.status(400).json({ 
+          message: 'A donor with this email already exists' 
+        });
+      }
+    }
+
     const newDonor = await prisma.donor.create({
       data: {
         first_name,
         middle_name,
         last_name,
+        organization_name,
         gender,
         age,
         email,
         phone_number,
         address,
+        city,
+        state,
+        postal_code,
+        country,
         registration_date: registration_date || new Date(),
         last_donation_date,
         total_donation_amount: total_donation_amount || 0.0,
@@ -54,9 +92,24 @@ export const createDonor = async (req, res) => {
       }
     });
 
+    console.log("Donor created successfully:", newDonor);
     res.status(201).json({ message: 'Donor created successfully', donor: newDonor });
   } catch (error) {
-    res.status(500).json({ message: 'Error creating donor', error: error.message });
+    console.error('Error creating donor:', error);
+    
+    // Check for Prisma-specific errors
+    if (error.code === 'P2002') {
+      return res.status(400).json({ 
+        message: 'A donor with this unique identifier already exists',
+        field: error.meta?.target?.[0] || 'unknown'
+      });
+    }
+    
+    res.status(500).json({ 
+      message: 'Error creating donor', 
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 };
 
@@ -406,6 +459,67 @@ export const getDonorById = async (req, res) => {
     res.status(200).json(donor);
   } catch (error) {
     res.status(500).json({ message: 'Error fetching donor', error: error.message });
+  }
+};
+
+export const updateDonor = async (req, res) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ message: 'Unauthorized: Please log in' });
+    }
+
+    const { id } = req.params;
+    const updateData = req.body;
+
+    // Check if donor exists
+    const existingDonor = await prisma.donor.findUnique({
+      where: { id, is_deleted: false }
+    });
+
+    if (!existingDonor) {
+      return res.status(404).json({ message: 'Donor not found' });
+    }
+
+    // Update donor
+    const updatedDonor = await prisma.donor.update({
+      where: { id },
+      data: updateData
+    });
+
+    res.status(200).json({ message: 'Donor updated successfully', donor: updatedDonor });
+  } catch (error) {
+    console.error('Error updating donor:', error);
+    res.status(500).json({ message: 'Error updating donor', error: error.message });
+  }
+};
+
+export const deleteDonor = async (req, res) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ message: 'Unauthorized: Please log in' });
+    }
+
+    const { id } = req.params;
+
+    // Check if donor exists
+    const existingDonor = await prisma.donor.findUnique({
+      where: { id, is_deleted: false }
+    });
+
+    if (!existingDonor) {
+      return res.status(404).json({ message: 'Donor not found' });
+    }
+
+    // Soft delete the donor (set is_deleted flag to true)
+    await prisma.donor.update({
+      where: { id },
+      data: { is_deleted: true }
+    });
+
+    res.status(200).json({ message: 'Donor deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting donor:', error);
+    res.status(500).json({ message: 'Error deleting donor', error: error.message });
   }
 };
 
