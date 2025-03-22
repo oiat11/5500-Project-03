@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -6,6 +6,7 @@ import { useNavigate } from "react-router-dom";
 import axios from 'axios';
 import { useToast } from "@/components/ui/toast";
 import { debounce } from 'lodash';
+import DonorFilters from '@/components/DonorFilters';
 
 export default function Donors() {
   const navigate = useNavigate();
@@ -13,6 +14,8 @@ export default function Donors() {
   const [donors, setDonors] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [availableFilters, setAvailableFilters] = useState({});
+  const [activeFilters, setActiveFilters] = useState({});
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 10,
@@ -20,21 +23,65 @@ export default function Donors() {
     totalPages: 0
   });
   
+  // Handle filter changes
+  const handleFilterChange = useCallback((filters) => {
+    setActiveFilters(filters);
+    fetchDonors(1, searchTerm, filters);
+  }, [searchTerm]);
+
   // Fetch donors with search and pagination
-  const fetchDonors = async (page = 1, search = "") => {
+  const fetchDonors = async (page = 1, search = "", filters = {}) => {
     try {
       setLoading(true);
-      const response = await axios.get(`/api/donor`, {
-        params: {
-          page,
-          limit: pagination.limit,
-          search,
-          sortBy: 'updated_at',
-          sortOrder: 'desc'
-        }
-      });
+      const params = {
+        page,
+        limit: pagination.limit,
+        search,
+        sortBy: 'updated_at',
+        sortOrder: 'desc'
+      };
+
+      // Add filter parameters
+      if (filters.minAge) params.minAge = filters.minAge;
+      if (filters.maxAge) params.maxAge = filters.maxAge;
+      if (filters.minDonationAmount) params.minDonationAmount = filters.minDonationAmount;
+      if (filters.maxDonationAmount) params.maxDonationAmount = filters.maxDonationAmount;
+      if (filters.minDonationCount) params.minDonationCount = filters.minDonationCount;
+      if (filters.maxDonationCount) params.maxDonationCount = filters.maxDonationCount;
+      if (filters.gender && filters.gender !== 'all') params.gender = filters.gender;
+      if (filters.isCompany !== undefined) params.isCompany = filters.isCompany;
+      
+      // Handle array parameters
+      if (filters.locations && filters.locations.length > 0) {
+        params.location = filters.locations;
+      }
+      
+      // Handle interest domains with level filtering
+      if (filters.interestDomains && filters.interestDomains.length > 0) {
+        params.interestDomains = filters.interestDomains.map(domain => domain.name);
+        
+        // Add interest level parameters for each domain
+        filters.interestDomains.forEach((domain, index) => {
+          params[`interestDomainLevel_${index}_name`] = domain.name;
+          params[`interestDomainLevel_${index}_min`] = domain.minLevel;
+          params[`interestDomainLevel_${index}_max`] = domain.maxLevel;
+        });
+        
+        params.interestDomainsCount = filters.interestDomains.length;
+      }
+      
+      if (filters.tags && filters.tags.length > 0) {
+        params.tags = filters.tags;
+      }
+
+      const response = await axios.get(`/api/donor`, { params });
       setDonors(response.data.donors);
       setPagination(response.data.pagination);
+      
+      // Store available filters for the filter component
+      if (response.data.filters) {
+        setAvailableFilters(response.data.filters);
+      }
     } catch (error) {
       console.error('Error fetching donors:', error);
       toast({
@@ -49,7 +96,7 @@ export default function Donors() {
 
   // Debounce search to avoid too many API calls
   const debouncedSearch = debounce((value) => {
-    fetchDonors(1, value);
+    fetchDonors(1, value, activeFilters);
   }, 500);
 
   // Handle search input change
@@ -62,7 +109,7 @@ export default function Donors() {
   // Handle page change
   const handlePageChange = (newPage) => {
     if (newPage > 0 && newPage <= pagination.totalPages) {
-      fetchDonors(newPage, searchTerm);
+      fetchDonors(newPage, searchTerm, activeFilters);
     }
   };
 
@@ -97,12 +144,18 @@ export default function Donors() {
                 className="w-full"
               />
             </div>
-            <Button variant="outline" onClick={() => fetchDonors(1, searchTerm)}>
+            <Button variant="outline" onClick={() => fetchDonors(1, searchTerm, activeFilters)}>
               Search
             </Button>
           </div>
         </CardContent>
       </Card>
+
+      {/* Filter Component */}
+      <DonorFilters 
+        onFilterChange={handleFilterChange} 
+        availableFilters={availableFilters}
+      />
 
       {/* Donors List */}
       <Card>

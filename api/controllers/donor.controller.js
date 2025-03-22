@@ -70,7 +70,18 @@ export const getDonors = async (req, res) => {
       limit = 10,
       sortBy = 'created_at',
       sortOrder = 'desc',
-      isCompany
+      isCompany,
+      minAge,
+      maxAge,
+      minDonationAmount,
+      maxDonationAmount,
+      minDonationCount,
+      maxDonationCount,
+      gender,
+      location,
+      interestDomains,
+      donorType,
+      tags
     } = req.query;
 
     // Convert page and limit to numbers
@@ -103,19 +114,133 @@ export const getDonors = async (req, res) => {
       ];
     }
 
+    // Age filter
+    if (minAge !== undefined) {
+      whereClause.age = {
+        ...whereClause.age,
+        gte: parseInt(minAge)
+      };
+    }
+    if (maxAge !== undefined) {
+      whereClause.age = {
+        ...whereClause.age,
+        lte: parseInt(maxAge)
+      };
+    }
+
+    // Gender filter
+    if (gender && gender !== 'all') {
+      whereClause.gender = gender;
+    }
+
+    // Location filter
+    if (location) {
+      const locations = Array.isArray(location) ? location : [location];
+      whereClause.OR = [
+        ...(whereClause.OR || []),
+        ...locations.map(loc => ({ 
+          city: { contains: loc } 
+        })),
+        ...locations.map(loc => ({ 
+          state: { contains: loc } 
+        })),
+        ...locations.map(loc => ({ 
+          country: { contains: loc } 
+        }))
+      ];
+    }
+
+    // Total donation amount filter
+    if (minDonationAmount !== undefined) {
+      whereClause.total_donation_amount = {
+        ...whereClause.total_donation_amount,
+        gte: parseFloat(minDonationAmount)
+      };
+    }
+    if (maxDonationAmount !== undefined) {
+      whereClause.total_donation_amount = {
+        ...whereClause.total_donation_amount,
+        lte: parseFloat(maxDonationAmount)
+      };
+    }
+
+    // Total donation count filter
+    if (minDonationCount !== undefined) {
+      whereClause.total_donations_count = {
+        ...whereClause.total_donations_count,
+        gte: parseInt(minDonationCount)
+      };
+    }
+    if (maxDonationCount !== undefined) {
+      whereClause.total_donations_count = {
+        ...whereClause.total_donations_count,
+        lte: parseInt(maxDonationCount)
+      };
+    }
+
+    // Interest domains filter
+    let interestDomainsFilter = {};
+    if (interestDomains) {
+      const domains = Array.isArray(interestDomains) 
+        ? interestDomains 
+        : [interestDomains];
+      
+      interestDomainsFilter = {
+        interest_domains: {
+          some: {
+            interest_domain: {
+              name: {
+                in: domains
+              }
+            }
+          }
+        }
+      };
+    }
+
+    // Tags filter
+    let tagsFilter = {};
+    if (tags) {
+      const tagList = Array.isArray(tags) ? tags : [tags];
+      tagsFilter = {
+        tags: {
+          some: {
+            tag: {
+              name: {
+                in: tagList
+              }
+            }
+          }
+        }
+      };
+    }
+
     // Count total donors matching the criteria
     const totalDonors = await prisma.donor.count({
-      where: whereClause
+      where: {
+        ...whereClause,
+        ...interestDomainsFilter,
+        ...tagsFilter
+      }
     });
 
     // Fetch donors with pagination, sorting and filtering
     const donors = await prisma.donor.findMany({
-      where: whereClause,
+      where: {
+        ...whereClause,
+        ...interestDomainsFilter,
+        ...tagsFilter
+      },
       include: {
         last_donation: true,
         tags: {
           include: {
             tag: true
+          }
+        },
+        interest_domains: {
+          include: {
+            interest_domain: true
           }
         }
       },
@@ -126,6 +251,62 @@ export const getDonors = async (req, res) => {
       take: limitNum
     });
 
+    // Get all available interest domains and tags for filters
+    const allInterestDomains = await prisma.interestDomain.findMany({
+      select: {
+        id: true,
+        name: true
+      }
+    });
+
+    const allTags = await prisma.tag.findMany({
+      where: {
+        is_deleted: false
+      },
+      select: {
+        id: true,
+        name: true,
+        color: true
+      }
+    });
+
+    // Get all locations for filters
+    const cities = await prisma.donor.groupBy({
+      by: ['city'],
+      where: {
+        city: {
+          not: null
+        },
+        is_deleted: false
+      }
+    });
+
+    const states = await prisma.donor.groupBy({
+      by: ['state'],
+      where: {
+        state: {
+          not: null
+        },
+        is_deleted: false
+      }
+    });
+
+    const countries = await prisma.donor.groupBy({
+      by: ['country'],
+      where: {
+        country: {
+          not: null
+        },
+        is_deleted: false
+      }
+    });
+
+    const locations = {
+      cities: cities.map(c => c.city).filter(Boolean),
+      states: states.map(s => s.state).filter(Boolean),
+      countries: countries.map(c => c.country).filter(Boolean)
+    };
+
     const totalPages = Math.ceil(totalDonors / limitNum);
 
     res.status(200).json({
@@ -135,6 +316,11 @@ export const getDonors = async (req, res) => {
         page: pageNum,
         limit: limitNum,
         totalPages
+      },
+      filters: {
+        interestDomains: allInterestDomains,
+        tags: allTags,
+        locations
       }
     });
   } catch (error) {
