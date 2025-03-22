@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -13,15 +13,69 @@ export default function Donors() {
   const { toast } = useToast();
   const [donors, setDonors] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [availableFilters, setAvailableFilters] = useState({});
   const [activeFilters, setActiveFilters] = useState({});
+  const fileInputRef = useRef(null);
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 10,
     total: 0,
     totalPages: 0
   });
+  
+  // Handle CSV file upload
+  const handleFileUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    // Verify it's a CSV file
+    if (file.type !== 'text/csv' && !file.name.endsWith('.csv')) {
+      toast({
+        title: "Invalid File",
+        description: "Please upload a CSV file.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Create FormData and append file
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    try {
+      setUploading(true);
+      
+      // Send the CSV file to the backend
+      const response = await axios.post('/api/donor/import/csv', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      
+      toast({
+        title: "Upload Successful",
+        description: `${response.data.importedCount || 'Multiple'} donors imported successfully.`,
+      });
+      
+      // Refresh donor list
+      fetchDonors();
+    } catch (error) {
+      console.error('Error uploading CSV:', error);
+      toast({
+        title: "Upload Failed",
+        description: error.response?.data?.message || "Failed to import donors. Please check your CSV format.",
+        variant: "destructive",
+      });
+    } finally {
+      setUploading(false);
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
   
   // Handle filter changes
   const handleFilterChange = useCallback((filters) => {
@@ -127,9 +181,24 @@ export default function Donors() {
       {/* Header with title and button */}
       <div className="flex items-center justify-between w-full mb-6">
         <h1 className="text-2xl font-bold whitespace-nowrap flex-shrink-0">Donors</h1>
-        <Button onClick={() => navigate("/donors/create")}>
-          Create Donor
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button onClick={() => navigate("/donors/create")}>
+            Create Donor
+          </Button>
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileUpload}
+            style={{ display: 'none' }}
+          />
+          <Button variant="outline" onClick={() => {
+            if (fileInputRef.current) {
+              fileInputRef.current.click();
+            }
+          }}>
+            Import CSV
+          </Button>
+        </div>
       </div>
 
       {/* Search and filters */}

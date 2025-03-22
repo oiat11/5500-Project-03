@@ -1,4 +1,6 @@
 import { PrismaClient } from '@prisma/client';
+import csv from 'csv-parser';
+import { Readable } from 'stream';
 
 const prisma = new PrismaClient();
 
@@ -185,17 +187,54 @@ export const getDonors = async (req, res) => {
         ? interestDomains 
         : [interestDomains];
       
-      interestDomainsFilter = {
-        interest_domains: {
-          some: {
-            interest_domain: {
-              name: {
-                in: domains
+      // Check if we have interest domain level filters
+      if (req.query.interestDomainsCount) {
+        const count = parseInt(req.query.interestDomainsCount);
+        
+        // Build a complex filter with level constraints for each domain
+        const domainFilters = [];
+        
+        for (let i = 0; i < count; i++) {
+          const domainName = req.query[`interestDomainLevel_${i}_name`];
+          const minLevel = parseInt(req.query[`interestDomainLevel_${i}_min`]) || 1;
+          const maxLevel = parseInt(req.query[`interestDomainLevel_${i}_max`]) || 5;
+          
+          if (domainName) {
+            domainFilters.push({
+              interest_domains: {
+                some: {
+                  interest_domain: {
+                    name: domainName
+                  },
+                  level: {
+                    gte: minLevel,
+                    lte: maxLevel
+                  }
+                }
+              }
+            });
+          }
+        }
+        
+        if (domainFilters.length > 0) {
+          interestDomainsFilter = {
+            OR: domainFilters
+          };
+        }
+      } else {
+        // Simple domain name filtering (backward compatibility)
+        interestDomainsFilter = {
+          interest_domains: {
+            some: {
+              interest_domain: {
+                name: {
+                  in: domains
+                }
               }
             }
           }
-        }
-      };
+        };
+      }
     }
 
     // Tags filter
@@ -367,5 +406,114 @@ export const getDonorById = async (req, res) => {
     res.status(200).json(donor);
   } catch (error) {
     res.status(500).json({ message: 'Error fetching donor', error: error.message });
+  }
+};
+
+// Helper function to validate and format donor data from CSV
+const validateDonorData = (data) => {
+  const donor = {};
+  
+  // Required fields with defaults
+  donor.first_name = data.first_name || null;
+  donor.last_name = data.last_name || null;
+  donor.organization_name = data.organization_name || null;
+  donor.email = data.email || null;
+  donor.phone_number = data.phone_number || null;
+  donor.is_company = data.is_company === 'true' || data.is_company === true || false;
+  
+  // Optional fields with defaults
+  donor.gender = data.gender || null;
+  donor.age = data.age ? parseInt(data.age) : null;
+  donor.address = data.address || null;
+  donor.city = data.city || null;
+  donor.state = data.state || null;
+  donor.postal_code = data.postal_code || null;
+  donor.country = data.country || null;
+  donor.total_donation_amount = data.total_donation_amount ? parseFloat(data.total_donation_amount) : 0;
+  donor.total_donations_count = data.total_donations_count ? parseInt(data.total_donations_count) : 0;
+  donor.anonymous_donation_preference = data.anonymous_donation_preference === 'true' || data.anonymous_donation_preference === true || false;
+  
+  // Validate email if provided (must be unique)
+  if (donor.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(donor.email)) {
+    throw new Error(`Invalid email format: ${donor.email}`);
+  }
+  
+  return donor;
+};
+
+export const importDonorsCsv = async (req, res) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ message: 'Unauthorized: Please log in' });
+    }
+    
+    if (!req.file) {
+      return res.status(400).json({ message: 'No CSV file uploaded' });
+    }
+    
+    const results = [];
+    const errors = [];
+    
+    // Create a readable stream from the buffer
+    const bufferStream = new Readable();
+    bufferStream.push(req.file.buffer);
+    bufferStream.push(null);
+    
+    // Process the CSV file
+    await new Promise((resolve, reject) => {
+      bufferStream
+        .pipe(csv())
+        .on('data', (data) => results.push(data))
+        .on('error', (error) => reject(error))
+        .on('end', () => resolve());
+    });
+    
+    // Validate and import each donor
+    const importedDonors = [];
+    for (const row of results) {
+      try {
+        const donorData = validateDonorData(row);
+        
+        // Check if donor with this email already exists
+        if (donorData.email) {
+          const existingDonor = await prisma.donor.findUnique({
+            where: { email: donorData.email }
+          });
+          
+          if (existingDonor) {
+            // Update existing donor
+            const updatedDonor = await prisma.donor.update({
+              where: { email: donorData.email },
+              data: donorData
+            });
+            importedDonors.push(updatedDonor);
+          } else {
+            // Create new donor
+            const newDonor = await prisma.donor.create({
+              data: donorData
+            });
+            importedDonors.push(newDonor);
+          }
+        } else {
+          // Create donor without email
+          const newDonor = await prisma.donor.create({
+            data: donorData
+          });
+          importedDonors.push(newDonor);
+        }
+      } catch (error) {
+        errors.push(`Row ${results.indexOf(row) + 1}: ${error.message}`);
+      }
+    }
+    
+    res.status(200).json({
+      message: 'Donors imported successfully',
+      importedCount: importedDonors.length,
+      totalRows: results.length,
+      errors: errors.length > 0 ? errors : undefined
+    });
+  } catch (error) {
+    console.error('Error importing donors from CSV:', error);
+    res.status(500).json({ message: 'Error importing donors', error: error.message });
   }
 };
