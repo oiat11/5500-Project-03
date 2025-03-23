@@ -8,9 +8,18 @@ const prisma = new PrismaClient();
 export const signUp = async (req, res, next) => {
     const { username, email, password } = req.body;
 
-    const hashedPassword = bcryptjs.hashSync(password, 10); 
-
     try {
+        // Check if user with this email already exists
+        const existingUser = await prisma.user.findUnique({
+            where: { email },
+        });
+
+        if (existingUser) {
+            return res.status(400).json({ message: "Email already in use. Please use a different email or login." });
+        }
+
+        const hashedPassword = bcryptjs.hashSync(password, 10); 
+
         const newUser = await prisma.user.create({
             data: { username, email, password: hashedPassword },
         });
