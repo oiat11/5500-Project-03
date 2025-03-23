@@ -1,7 +1,7 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import cookieParser from 'cookie-parser';
-import cors from 'cors';  // ✅ 引入 CORS
+import cors from 'cors'; 
 import authRoutes from './routes/auth.route.js';
 import donorRoutes from './routes/donor.route.js';
 
@@ -19,7 +19,7 @@ app.use(cors({
     credentials: true,  
 }));
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT;
 
 app.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
