@@ -1,12 +1,11 @@
-// eventController.js
 import { PrismaClient } from '@prisma/client';
+import { errorHandler } from '../utils/error.js';
 
 const prisma = new PrismaClient();
 
+// Create Event with Tags and Donors
 export const createEventWithDonors = async (req, res, next) => {
-  const { name, description, date, location, tagIds, donors } = req.body;
-
-  // donors: [{ donorId: 'uuid...', status: 'invited' }, ...]
+  const { name, description, date, location, tagIds = [], donors = [] } = req.body;
 
   try {
     const event = await prisma.event.create({
@@ -21,7 +20,7 @@ export const createEventWithDonors = async (req, res, next) => {
         donors: {
           create: donors.map((d) => ({
             donor: { connect: { id: d.donorId } },
-            status: d.status, 
+            status: d.status,
           })),
         },
       },
@@ -33,14 +32,17 @@ export const createEventWithDonors = async (req, res, next) => {
       },
     });
 
-    res.status(201).json(event);
+    res.status(201).json({
+      success: true,
+      message: 'Event created successfully',
+      event,
+    });
   } catch (err) {
     next(err);
   }
 };
 
-
-
+// Get All Events
 export const getEvents = async (req, res, next) => {
   try {
     const events = await prisma.event.findMany({
@@ -54,16 +56,21 @@ export const getEvents = async (req, res, next) => {
       orderBy: { date: 'asc' },
     });
 
-    res.json(events);
+    res.status(200).json({
+      success: true,
+      message: 'Events fetched successfully',
+      events,
+    });
   } catch (err) {
     next(err);
   }
 };
 
+// Get Event by ID
 export const getEventById = async (req, res, next) => {
-  try {
-    const { id } = req.params;
+  const { id } = req.params;
 
+  try {
     const event = await prisma.event.findUnique({
       where: { id },
       include: {
@@ -75,21 +82,26 @@ export const getEventById = async (req, res, next) => {
     });
 
     if (!event || event.is_deleted) {
-      return res.status(404).json({ error: 'Event not found' });
+      return next(errorHandler(404, 'Event not found'));
     }
 
-    res.json(event);
+    res.status(200).json({
+      success: true,
+      message: 'Event fetched successfully',
+      event,
+    });
   } catch (err) {
     next(err);
   }
 };
 
+// Update Event
 export const updateEvent = async (req, res, next) => {
-  try {
-    const { id } = req.params;
-    const { name, description, date, location, tagIds } = req.body;
+  const { id } = req.params;
+  const { name, description, date, location, tagIds = [] } = req.body;
 
-    const updatedEvent = await prisma.event.update({
+  try {
+    const event = await prisma.event.update({
       where: { id },
       data: {
         name,
@@ -97,23 +109,33 @@ export const updateEvent = async (req, res, next) => {
         date: date ? new Date(date) : undefined,
         location,
         tags: {
-          set: tagIds?.map((id) => ({ id })) || [],
+          set: tagIds.map((id) => ({ id })),
         },
       },
-      include: { tags: true },
+      include: {
+        tags: true,
+        donors: {
+          include: { donor: true },
+        },
+      },
     });
 
-    res.json(updatedEvent);
+    res.status(200).json({
+      success: true,
+      message: 'Event updated successfully',
+      event,
+    });
   } catch (err) {
     next(err);
   }
 };
 
+// Soft Delete Event
 export const deleteEvent = async (req, res, next) => {
-  try {
-    const { id } = req.params;
+  const { id } = req.params;
 
-    const deletedEvent = await prisma.event.update({
+  try {
+    const event = await prisma.event.update({
       where: { id },
       data: {
         is_deleted: true,
@@ -121,7 +143,11 @@ export const deleteEvent = async (req, res, next) => {
       },
     });
 
-    res.json({ message: 'Event soft deleted', event: deletedEvent });
+    res.status(200).json({
+      success: true,
+      message: 'Event deleted successfully',
+      event,
+    });
   } catch (err) {
     next(err);
   }
