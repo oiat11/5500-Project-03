@@ -40,16 +40,15 @@ model Tag {
 
 model Donor {
   id                      String      @id @default(uuid())
-  first_name              String?     @db.VarChar(255)
+  first_name              String     @db.VarChar(255)
   nick_name               String?     @db.VarChar(255)
-  last_name               String?     @db.VarChar(255)
+  last_name               String     @db.VarChar(255)
   organization_name       String?     @db.VarChar(255)
-  email                   String?     @unique @db.VarChar(255)
-  phone_number            String?     @db.VarChar(50)
-  address                 String?     @db.Text
-  city                    String?     @db.Text
+  unit_number        String?     @db.VarChar(255)
+  street_address          String     @db.Text
+  city                    City
 
-  total_donation_amount   Decimal     @default(0) @db.Decimal(10, 2)
+  total_donation_amount   Decimal?    @default(0) @db.Decimal(10, 2)
   total_pledge            Decimal?    @db.Decimal(10, 2)
   largest_gift_amount     Decimal?    @db.Decimal(10, 2)
   largest_gift_appeal     String?     @db.VarChar(255)
@@ -78,11 +77,19 @@ model Donor {
   created_at              DateTime    @default(now())
   updated_at              DateTime    @updatedAt
 
-  @@map("Donor")
-  @@index([email])
-  @@index([phone_number])
-}
+  @@index([last_name])
+  @@index([organization_name])
+  @@index([city])
+  @@index([exclude])
+  @@index([deceased])
+  @@index([pmm])
+  @@index([communication_preference])
+  @@index([subscription_events_in_person])
+  @@index([subscription_events_magazine])
+  @@index([created_at])
 
+  @@map("Donor")
+}
 
 model DonorTag {
   donor              Donor       @relation(fields: [donor_id], references: [id], onDelete: Cascade)
@@ -158,4 +165,17 @@ enum CommunicationType {
   Event
   Appeal
   Research_update
+}
+
+enum City {
+  Victoria
+  Nanaimo
+  Courtenay
+  Parksville
+  Campbell_River
+  Saanich
+  Vancouver
+  Surrey
+  Burnaby
+  Richmond
 }

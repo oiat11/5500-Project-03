@@ -4,114 +4,81 @@ import { Readable } from 'stream';
 
 const prisma = new PrismaClient();
 
-export const createDonor = async (req, res) => {
+export const createDonor = async (req, res, next) => {
   try {
     if (!req.user) {
       return res.status(401).json({ message: 'Unauthorized: Please log in' });
     }
 
-    console.log("Creating donor with data:", req.body);
-
     const {
       first_name,
-      middle_name,
+      nick_name,
       last_name,
       organization_name,
-      gender,
-      age,
-      email,
-      phone_number,
-      address,
+      unit_number,
+      street_address,
       city,
-      state,
-      postal_code,
-      country,
-      registration_date,
-      last_donation_date,
       total_donation_amount,
-      total_donations_count,
-      anonymous_donation_preference,
-      interest_domain,
-      is_merged,
-      is_company,
-      merge_to_donor_id,
+      total_pledge,
+      largest_gift_amount,
+      largest_gift_appeal,
+      last_gift_amount,
+      last_gift_request,
+      last_gift_appeal,
+      first_gift_date,
+      pmm,
+      exclude,
+      deceased,
+      contact_phone_type,
+      phone_restrictions,
+      email_restrictions,
+      communication_restrictions,
+      subscription_events_in_person,
+      subscription_events_magazine,
       communication_preference
     } = req.body;
 
-    // Validation for required fields based on type
-    if (is_company && !organization_name) {
-      return res.status(400).json({ 
-        message: 'Organization name is required for company donors' 
-      });
-    }
-
-    if (!is_company && (!first_name || !last_name)) {
-      return res.status(400).json({ 
-        message: 'First name and last name are required for individual donors' 
-      });
-    }
-    
-    // Check if email already exists
-    if (email) {
-      const existingDonor = await prisma.donor.findUnique({
-        where: { email, is_deleted: false }
-      });
-      
-      if (existingDonor) {
-        return res.status(400).json({ 
-          message: 'A donor with this email already exists' 
-        });
-      }
+    if (!pmm) {
+      return res.status(400).json({ message: 'PMM is required' });
     }
 
     const newDonor = await prisma.donor.create({
       data: {
         first_name,
-        middle_name,
+        nick_name,
         last_name,
         organization_name,
-        gender,
-        age,
-        email,
-        phone_number,
-        address,
+        unit_number,
+        street_address,
         city,
-        state,
-        postal_code,
-        country,
-        registration_date: registration_date || new Date(),
-        last_donation_date,
-        total_donation_amount: total_donation_amount || 0.0,
-        total_donations_count: total_donations_count || 0,
-        anonymous_donation_preference: anonymous_donation_preference || false,
-        interest_domain,
-        is_merged: is_merged || false,
-        is_company: is_company || false,
-        merge_to_donor_id,
-        communication_preference
+        total_donation_amount: total_donation_amount || 0,
+        total_pledge,
+        largest_gift_amount,
+        largest_gift_appeal,
+        last_gift_amount,
+        last_gift_request,
+        last_gift_appeal,
+        first_gift_date,
+        pmm,
+        exclude: exclude || false,
+        deceased: deceased || false,
+        contact_phone_type: contact_phone_type || 'mobile',
+        phone_restrictions,
+        email_restrictions,
+        communication_restrictions,
+        subscription_events_in_person: subscription_events_in_person || 'opt_in',
+        subscription_events_magazine: subscription_events_magazine || 'opt_in',
+        communication_preference: communication_preference || 'Thank_you'
       }
     });
 
-    console.log("Donor created successfully:", newDonor);
     res.status(201).json({ message: 'Donor created successfully', donor: newDonor });
   } catch (error) {
-    console.error('Error creating donor:', error);
-    
-    // Check for Prisma-specific errors
-    if (error.code === 'P2002') {
-      return res.status(400).json({ 
-        message: 'A donor with this unique identifier already exists',
-        field: error.meta?.target?.[0] || 'unknown'
-      });
-    }
-    
-    res.status(500).json({ 
-      message: 'Error creating donor', 
-      error: error.message,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-    });
+    next(error);
   }
 };
+
+
 
 export const getDonors = async (req, res) => {
   try {
