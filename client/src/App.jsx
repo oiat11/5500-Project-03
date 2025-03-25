@@ -10,6 +10,7 @@ import CreateDonor from './pages/CreateDonor'
 import Events from './pages/Events'
 import PrivateRoute from './components/PrivateRoute'
 import Settings from './pages/Settings'
+import CreateEvent from './pages/CreateEvent'
 
 function App() {
   return (
@@ -38,6 +39,7 @@ function App() {
             <Route path="/donors" element={<Donors />} />
             <Route path="/donors/create" element={<CreateDonor />} />
             <Route path="/events" element={<Events />} />
+            <Route path="/events/create" element={<CreateEvent />} />
             <Route path="/settings" element={<Settings />} />
           </Route>
         </Route>
