@@ -343,8 +343,8 @@ export default function Donors() {
         <h1 className="text-2xl font-bold whitespace-nowrap flex-shrink-0">Donors</h1>
         <div className="flex items-center gap-2">
           <input type="file" ref={fileInputRef} onChange={handleFileUpload} style={{ display: 'none' }} />
-          <Button variant="outline" onClick={() => fileInputRef.current?.click()}>Import CSV</Button>
-          <Button onClick={() => navigate("/donors/create")}>Create Donor</Button>
+          <Button variant="outline" onClick={() => fileInputRef.current?.click()}>Import Donors with CSV</Button>
+          <Button onClick={() => navigate("/donors/create")}>Add Donor Manually</Button>
         </div>
       </div>
 

@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import {errorHandler} from "../utils/error.js";
 import csv from 'csv-parser';
 import { Readable } from 'stream';
 
@@ -78,6 +79,41 @@ export const createDonor = async (req, res, next) => {
   }
 };
 
+export const getAllDonors = async (req, res) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ message: 'Unauthorized: Please log in' });
+    }
+
+    const donors = await prisma.donor.findMany({
+      where: { is_deleted: false },
+      select: {
+        id: true,
+        first_name: true,
+        last_name: true,
+        organization_name: true,
+        city: true,
+        pmm: true
+      },
+      orderBy: {
+        created_at: 'desc'
+      }
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Donors fetched successfully",
+      donors
+    });
+  } catch (error) {
+    console.error("Error fetching all donors:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch donors",
+      error: error.message
+    });
+  }
+};
 
 
 export const getDonors = async (req, res) => {

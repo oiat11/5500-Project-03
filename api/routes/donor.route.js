@@ -1,6 +1,6 @@
 import express from 'express';
 import multer from 'multer';
-import { createDonor, getDonors, getDonorById, updateDonor, deleteDonor, importDonorsCsv } from '../controllers/donor.controller.js';
+import { createDonor, getDonors, getAllDonors, getDonorById, updateDonor, deleteDonor, importDonorsCsv } from '../controllers/donor.controller.js';
 import { verifyToken } from '../utils/verifyUser.js';
 
 const router = express.Router();
@@ -22,8 +22,13 @@ const upload = multer({
 // Create donor
 router.post('/', verifyToken, createDonor);
 
+
+
 // Get all donors with search and pagination
 router.get('/', verifyToken, getDonors);
+
+// Get all donors without any filters
+router.get('/all', verifyToken, getAllDonors);
 
 // Get donor by ID
 router.get('/:id', verifyToken, getDonorById);
