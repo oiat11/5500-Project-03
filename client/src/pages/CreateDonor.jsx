@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -6,9 +6,14 @@ import { useNavigate } from "react-router-dom";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { MultiSelect } from "@/components/ui/multi-select";
+import { useToast } from "@/components/ui/toast";
+import { PlusCircle } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 
 export default function CreateDonor() {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [formData, setFormData] = useState({
     first_name: "",
     last_name: "",
@@ -34,10 +39,49 @@ export default function CreateDonor() {
     communication_restrictions: "",
     subscription_events_in_person: "opt_in",
     subscription_events_magazine: "opt_in",
-    communication_preference: "Thank_you"
+    communication_preference: "Thank_you",
+    tags: []
   });
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const [tags, setTags] = useState([]);
+  const [loadingTags, setLoadingTags] = useState(false);
+  const [newTagDialog, setNewTagDialog] = useState(false);
+  const [newTag, setNewTag] = useState({ name: "", color: "#6366f1" });
+
+  useEffect(() => {
+    const fetchTags = async () => {
+      setLoadingTags(true);
+      try {
+        const res = await fetch("/api/tag", {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+        
+        if (!res.ok) throw new Error("Failed to fetch tags");
+        
+        const data = await res.json();
+        setTags(data.tags.map(tag => ({
+          value: tag.id,
+          label: tag.name,
+          color: tag.color
+        })));
+      } catch (err) {
+        console.error("Error fetching tags:", err);
+        toast({
+          title: "Error",
+          description: "Failed to load tags. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoadingTags(false);
+      }
+    };
+    
+    fetchTags();
+  }, [toast]);
 
   const handleChange = (e) => {
     const { id, value, type, checked } = e.target;
@@ -54,6 +98,69 @@ export default function CreateDonor() {
     }));
   };
 
+  const handleTagsChange = (selectedTags) => {
+    setFormData((prev) => ({
+      ...prev,
+      tags: selectedTags,
+    }));
+  };
+
+  const handleCreateNewTag = async () => {
+    if (!newTag.name.trim()) {
+      toast({
+        title: "Error",
+        description: "Tag name cannot be empty",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/tag", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: newTag.name,
+          color: newTag.color
+        }),
+      });
+
+      if (!res.ok) throw new Error("Failed to create tag");
+      
+      const data = await res.json();
+
+      const createdTag = {
+        value: data.tag.id,
+        label: data.tag.name,
+        color: data.tag.color
+      };
+      
+      setTags(prev => [...prev, createdTag]);
+      
+      setFormData(prev => ({
+        ...prev,
+        tags: [...prev.tags, createdTag]
+      }));
+      
+      setNewTag({ name: "", color: "#6366f1" });
+      setNewTagDialog(false);
+      
+      toast({
+        title: "Success",
+        description: "New tag created and added",
+      });
+    } catch (err) {
+      console.error("Error creating tag:", err);
+      toast({
+        title: "Error",
+        description: "Failed to create tag. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMessage("");
@@ -67,6 +174,7 @@ export default function CreateDonor() {
       largest_gift_amount: formData.largest_gift_amount ? parseFloat(formData.largest_gift_amount) : null,
       last_gift_amount: formData.last_gift_amount ? parseFloat(formData.last_gift_amount) : null,
       first_gift_date: formData.first_gift_date ? new Date(formData.first_gift_date).toISOString() : null,
+      tagIds: formData.tags.map(tag => tag.value)
     };
 
     try {
@@ -82,7 +190,10 @@ export default function CreateDonor() {
         throw new Error("Failed to create donor");
       }
 
-      setSuccessMessage("Donor created successfully!");
+      toast({
+        title: "Success",
+        description: "Donor created successfully!",
+      });
       navigate("/donors");
     } catch (error) {
       console.error("Error creating donor:", error);
@@ -147,6 +258,31 @@ export default function CreateDonor() {
             </SelectContent>
           </Select>
         </div>
+        
+        <div>
+          <div className="flex justify-between items-center mb-1">
+            <Label htmlFor="tags">Tags</Label>
+            <Button 
+              type="button" 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => setNewTagDialog(true)}
+              className="flex items-center text-xs"
+            >
+              <PlusCircle className="h-3.5 w-3.5 mr-1" />
+              Create New Tag
+            </Button>
+          </div>
+          <MultiSelect
+            id="tags"
+            isLoading={loadingTags}
+            options={tags}
+            value={formData.tags}
+            onChange={handleTagsChange}
+            placeholder="Select or create tags..."
+          />
+        </div>
+        
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <Label htmlFor="total_donation_amount" className="mb-1">Total Donation Amount</Label>
@@ -202,6 +338,45 @@ export default function CreateDonor() {
         {errorMessage && <p className="text-red-600 mb-4">{errorMessage}</p>}
         <Button type="submit" className="w-full mt-4">Submit</Button>
       </form>
+
+      <Dialog open={newTagDialog} onOpenChange={setNewTagDialog}>
+        <DialogContent className="sm:max-w-[500px] w-[90vw]">
+          <DialogHeader>
+            <DialogTitle>Create New Tag</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="new-tag-name">Tag Name</Label>
+              <Input 
+                id="new-tag-name" 
+                value={newTag.name} 
+                onChange={(e) => setNewTag(prev => ({ ...prev, name: e.target.value }))} 
+                placeholder="Enter tag name"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="new-tag-color">Tag Color</Label>
+              <div className="flex items-center gap-2">
+                <Input 
+                  id="new-tag-color" 
+                  type="color" 
+                  value={newTag.color} 
+                  onChange={(e) => setNewTag(prev => ({ ...prev, color: e.target.value }))} 
+                  className="w-16 h-10 p-1"
+                />
+                <div 
+                  className="w-full h-10 rounded-md border" 
+                  style={{ backgroundColor: newTag.color }}
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setNewTagDialog(false)}>Cancel</Button>
+            <Button onClick={handleCreateNewTag}>Create Tag</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -36,7 +36,8 @@ export const createDonor = async (req, res, next) => {
       communication_restrictions,
       subscription_events_in_person,
       subscription_events_magazine,
-      communication_preference
+      communication_preference,
+      tagIds = []
     } = req.body;
 
     if (!pmm) {
@@ -69,7 +70,19 @@ export const createDonor = async (req, res, next) => {
         communication_restrictions,
         subscription_events_in_person: subscription_events_in_person || 'opt_in',
         subscription_events_magazine: subscription_events_magazine || 'opt_in',
-        communication_preference: communication_preference || 'Thank_you'
+        communication_preference: communication_preference || 'Thank_you',
+        tags: tagIds.length > 0 ? {
+          create: tagIds.map(tagId => ({
+            tag: { connect: { id: tagId } }
+          }))
+        } : undefined
+      },
+      include: {
+        tags: {
+          include: {
+            tag: true
+          }
+        }
       }
     });
 
