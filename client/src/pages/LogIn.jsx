@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { FaCircleExclamation } from "react-icons/fa6";
 import { Link, useNavigate } from "react-router-dom";
 import { signInStart, signInSuccess, signInFailure } from "../redux/auth/authSlice";
+import axios from "axios";
 
 export default function LogIn({ className, ...props }) {
   const navigate = useNavigate();
@@ -34,29 +35,22 @@ export default function LogIn({ className, ...props }) {
     dispatch(signInStart());
 
     try {
-      const response = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email: formData.email,
-          password: formData.password,
-        }),
+      const response = await axios.post("/api/auth/login", {
+        email: formData.email,
+        password: formData.password,
+      }, {
+        withCredentials: true
       });
 
-      const data = await response.json();
-      console.log("Login API Response:", data);
+      console.log("Login API Response:", response.data);
 
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to log in");
+      if (response.data) {
+        dispatch(signInSuccess(response.data));
+        navigate("/donors", { replace: true });
       }
-
-      dispatch(signInSuccess(data));
-      navigate("/donors", { replace: true });
     } catch (err) {
-      dispatch(signInFailure(err.message));
-      setError(err.message);
+      dispatch(signInFailure(err.response?.data?.message || err.message));
+      setError(err.response?.data?.message || err.message);
     }
   };
 

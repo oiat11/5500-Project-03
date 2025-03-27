@@ -53,54 +53,38 @@ export default function Donors() {
     const file = event.target.files[0];
     if (!file) return;
 
-    // Verify it's a CSV file
-    if (file.type !== "text/csv" && !file.name.endsWith(".csv")) {
-      toast({
-        title: "Invalid File",
-        description: "Please upload a CSV file.",
-        variant: "destructive",
-      });
+    // Check if file is CSV
+    if (!file.name.endsWith('.csv') && file.type !== 'text/csv') {
+      toast.error('Please upload a CSV file');
       return;
     }
 
-    // Create FormData and append file
     const formData = new FormData();
-    formData.append("file", file);
+    formData.append('file', file);
 
     try {
-      setUploading(true);
-
-      // Send the CSV file to the backend
-      const response = await axios.post("/api/donor/import/csv", formData, {
+      const response = await axios.post('/api/donor/import', formData, {
         headers: {
-          "Content-Type": "multipart/form-data",
-        },
+          'Content-Type': 'multipart/form-data'
+        }
       });
 
-      toast({
-        title: "Upload Successful",
-        description: `${
-          response.data.importedCount || "Multiple"
-        } donors imported successfully.`,
-      });
-
-      // Refresh donor list
-      fetchDonors();
-    } catch (error) {
-      console.error("Error uploading CSV:", error);
-      toast({
-        title: "Upload Failed",
-        description:
-          error.response?.data?.message ||
-          "Failed to import donors. Please check your CSV format.",
-        variant: "destructive",
-      });
-    } finally {
-      setUploading(false);
-      // Reset file input
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
+      if (response.data.success) {
+        toast.success(`Successfully imported ${response.data.count} donors`);
+        // Reset search and filters
+        setSearchTerm('');
+        setActiveFilters({});
+        // Refresh donor list
+        fetchDonors(1, '', {});
+      } else {
+        throw new Error(response.data.error || 'Failed to import donors');
       }
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      toast.error(error.response?.data?.error || 'Failed to import donors');
+    } finally {
+      // Reset file input
+      event.target.value = '';
     }
   };
 

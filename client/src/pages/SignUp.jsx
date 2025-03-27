@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { FaCircleExclamation } from "react-icons/fa6";
 import { Link, useNavigate } from "react-router-dom";
 import { signInStart, signInSuccess, signInFailure } from "../redux/auth/authSlice";
+import axios from "axios";
 
 export default function SignUp({ className, ...props }) {
   const navigate = useNavigate();
@@ -42,29 +43,21 @@ export default function SignUp({ className, ...props }) {
     dispatch(signInStart());
 
     try {
-      const response = await fetch("/api/auth/signup", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          username: formData.name,
-          email: formData.email,
-          password: formData.password,
-        }),
+      const response = await axios.post("/api/auth/signup", {
+        username: formData.name,
+        email: formData.email,
+        password: formData.password,
+      }, {
+        withCredentials: true
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to sign up");
+      if (response.data) {
+        dispatch(signInSuccess(response.data));
+        navigate("/donors", { replace: true });
       }
-
-      dispatch(signInSuccess(data));
-      navigate("/donors", { replace: true });
     } catch (err) {
-      dispatch(signInFailure(err.message));
-      setError(err.message);
+      dispatch(signInFailure(err.response?.data?.message || err.message));
+      setError(err.response?.data?.message || err.message);
     }
   };
 
