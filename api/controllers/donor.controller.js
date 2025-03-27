@@ -647,3 +647,95 @@ export const importDonorsCsv = async (req, res) => {
     res.status(500).json({ message: 'Error importing donors', error: error.message });
   }
 };
+
+export const recommendDonors = async (req, res, next) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ message: 'Unauthorized: Please log in' });
+    }
+
+    const { tagIds = [], count = 10 } = req.body;
+    
+    // 如果没有提供标签，按捐赠金额排序
+    if (tagIds.length === 0) {
+      const topDonors = await prisma.donor.findMany({
+        where: {
+          exclude: false,
+          deceased: false
+        },
+        orderBy: {
+          total_donation_amount: 'desc'
+        },
+        take: count,
+        include: {
+          tags: {
+            include: {
+              tag: true
+            }
+          }
+        }
+      });
+      
+      const formattedDonors = topDonors.map(donor => ({
+        value: donor.id,
+        label: donor.organization_name || `${donor.first_name} ${donor.last_name}`,
+        tags: donor.tags.map(t => t.tag),
+        totalDonation: donor.total_donation_amount || 0,
+        city: donor.city
+      }));
+      
+      return res.status(200).json({ donors: formattedDonors });
+    }
+    
+    // 如果提供了标签，查找匹配标签的捐赠者
+    // 使用原生SQL或Prisma的复杂查询来实现更高效的推荐
+    const donorsWithTags = await prisma.donor.findMany({
+      where: {
+        exclude: false,
+        deceased: false,
+        tags: {
+          some: {
+            tag_id: {
+              in: tagIds
+            }
+          }
+        }
+      },
+      include: {
+        tags: {
+          include: {
+            tag: true
+          }
+        }
+      }
+    });
+    
+    // 计算匹配分数
+    const scoredDonors = donorsWithTags.map(donor => {
+      const matchingTagCount = donor.tags.filter(t => 
+        tagIds.includes(t.tagId)
+      ).length;
+      
+      return {
+        donor,
+        score: matchingTagCount + (donor.total_donation_amount / 10000 || 0)
+      };
+    });
+    
+    // 按分数排序并限制数量
+    const recommendedDonors = scoredDonors
+      .sort((a, b) => b.score - a.score)
+      .slice(0, count)
+      .map(item => ({
+        value: item.donor.id,
+        label: item.donor.organization_name || `${item.donor.first_name} ${item.donor.last_name}`,
+        tags: item.donor.tags.map(t => t.tag),
+        totalDonation: item.donor.total_donation_amount || 0,
+        city: item.donor.city
+      }));
+    
+    res.status(200).json({ donors: recommendedDonors });
+  } catch (error) {
+    next(errorHandler(error));
+  }
+};

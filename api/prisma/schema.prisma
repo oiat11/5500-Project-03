@@ -112,6 +112,8 @@ model Event {
   description String?     @db.Text
   date        DateTime
   location    String?     @db.Text
+  status      EventStatus @default(draft)
+  donor_count Int?
   donors      DonorEvent[]
   tags        Tag[]       @relation("EventTags")
   is_deleted  Boolean     @default(false)
@@ -179,4 +181,10 @@ enum City {
   Surrey
   Burnaby
   Richmond
+}
+
+enum EventStatus {
+  draft
+  published
+  archived
 }
