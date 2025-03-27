@@ -55,22 +55,42 @@ export default function Donors() {
 
     // Check if file is CSV
     if (!file.name.endsWith('.csv') && file.type !== 'text/csv') {
-      toast.error('Please upload a CSV file');
+      toast({
+        title: "Error",
+        description: "Please upload a CSV file",
+        variant: "destructive",
+      });
       return;
     }
 
     const formData = new FormData();
     formData.append('file', file);
 
+    setUploading(true);
     try {
       const response = await axios.post('/api/donor/import', formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
-        }
+        },
+        withCredentials: true
       });
 
       if (response.data.success) {
-        toast.success(`Successfully imported ${response.data.count} donors`);
+        toast({
+          title: "Success",
+          description: `Successfully imported ${response.data.count} donors out of ${response.data.total} rows`,
+        });
+        
+        // If there are any errors, show them
+        if (response.data.errors && response.data.errors.length > 0) {
+          console.warn('Import warnings:', response.data.errors);
+          toast({
+            title: "Warning",
+            description: "Some donors could not be imported. Check console for details.",
+            variant: "warning",
+          });
+        }
+
         // Reset search and filters
         setSearchTerm('');
         setActiveFilters({});
@@ -81,10 +101,17 @@ export default function Donors() {
       }
     } catch (error) {
       console.error('Error uploading file:', error);
-      toast.error(error.response?.data?.error || 'Failed to import donors');
+      toast({
+        title: "Error",
+        description: error.response?.data?.error || 'Failed to import donors',
+        variant: "destructive",
+      });
     } finally {
+      setUploading(false);
       // Reset file input
-      event.target.value = '';
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
   };
 
