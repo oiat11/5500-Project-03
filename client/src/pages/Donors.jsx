@@ -7,6 +7,7 @@ import axios from "axios";
 import { useToast } from "@/components/ui/toast";
 import { debounce } from "lodash";
 import DonorFilters from "@/components/DonorFilters";
+import DonorImportCsv from "@/components/DonorImportCsv";
 import {
   Table,
   TableBody,
@@ -47,73 +48,6 @@ export default function Donors() {
     column: "updated_at",
     direction: "desc",
   });
-
-  // Handle CSV file upload
-  const handleFileUpload = async (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    // Check if file is CSV
-    if (!file.name.endsWith('.csv') && file.type !== 'text/csv') {
-      toast({
-        title: "Error",
-        description: "Please upload a CSV file",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const formData = new FormData();
-    formData.append('file', file);
-
-    setUploading(true);
-    try {
-      const response = await axios.post('/api/donor/import', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        },
-        withCredentials: true
-      });
-
-      if (response.data.success) {
-        toast({
-          title: "Success",
-          description: `Successfully imported ${response.data.count} donors out of ${response.data.total} rows`,
-        });
-        
-        // If there are any errors, show them
-        if (response.data.errors && response.data.errors.length > 0) {
-          console.warn('Import warnings:', response.data.errors);
-          toast({
-            title: "Warning",
-            description: "Some donors could not be imported. Check console for details.",
-            variant: "warning",
-          });
-        }
-
-        // Reset search and filters
-        setSearchTerm('');
-        setActiveFilters({});
-        // Refresh donor list
-        fetchDonors(1, '', {});
-      } else {
-        throw new Error(response.data.error || 'Failed to import donors');
-      }
-    } catch (error) {
-      console.error('Error uploading file:', error);
-      toast({
-        title: "Error",
-        description: error.response?.data?.error || 'Failed to import donors',
-        variant: "destructive",
-      });
-    } finally {
-      setUploading(false);
-      // Reset file input
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-    }
-  };
 
   // Handle filter changes
   const handleFilterChange = useCallback(
@@ -351,11 +285,18 @@ export default function Donors() {
   return (
     <div className="w-full max-w-[1200px] mx-auto px-4">
       <div className="flex items-center justify-between w-full mb-6">
-        <h1 className="text-2xl font-bold whitespace-nowrap flex-shrink-0">Donors</h1>
+        <h1 className="text-2xl font-bold whitespace-nowrap flex-shrink-0">
+          Donors
+        </h1>
         <div className="flex items-center gap-2">
-          <input type="file" ref={fileInputRef} onChange={handleFileUpload} style={{ display: 'none' }} />
-          <Button variant="outline" onClick={() => fileInputRef.current?.click()}>Import Donors with CSV</Button>
-          <Button onClick={() => navigate("/donors/create")}>Add Donor Manually</Button>
+            <DonorImportCsv onSuccess={() => {
+              setSearchTerm('');
+              setActiveFilters({});
+              fetchDonors(1, '', {});
+            }} />
+          <Button onClick={() => navigate("/donors/create")}>
+            Add Donor Manually
+          </Button>
         </div>
       </div>
 
@@ -363,30 +304,54 @@ export default function Donors() {
         <CardContent className="pt-6">
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1">
-              <Input placeholder="Search donors..." value={searchTerm} onChange={handleSearchChange} className="w-full" />
+              <Input
+                placeholder="Search donors..."
+                value={searchTerm}
+                onChange={handleSearchChange}
+                className="w-full"
+              />
             </div>
-            <Button variant="outline" onClick={() => fetchDonors(1, searchTerm, activeFilters)}>Search</Button>
+            <Button
+              variant="outline"
+              onClick={() => fetchDonors(1, searchTerm, activeFilters)}
+            >
+              Search
+            </Button>
           </div>
         </CardContent>
       </Card>
 
-      <DonorFilters onFilterChange={handleFilterChange} availableFilters={availableFilters} />
+      <DonorFilters
+        onFilterChange={handleFilterChange}
+        availableFilters={availableFilters}
+      />
 
       <div className="bg-white rounded-md shadow overflow-hidden w-full min-h-[400px]">
         <div className="flex justify-between items-center p-4 border-b">
           <h2 className="text-lg font-semibold">Results Section</h2>
           {selectedDonors.length > 0 && (
             <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-500">{selectedDonors.length} donor(s) selected</span>
+              <span className="text-sm text-gray-500">
+                {selectedDonors.length} donor(s) selected
+              </span>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm">Actions <ChevronDown className="ml-1 h-4 w-4" /></Button>
+                  <Button variant="outline" size="sm">
+                    Actions <ChevronDown className="ml-1 h-4 w-4" />
+                  </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuLabel>Bulk Actions</DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => handleBulkExport()}>Export Selected</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleBulkDelete()} className="text-red-600">Delete Selected</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleBulkExport()}>
+                    Export Selected
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => handleBulkDelete()}
+                    className="text-red-600"
+                  >
+                    Delete Selected
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -398,36 +363,159 @@ export default function Donors() {
             <Table className="w-full table-fixed">
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-12"><Checkbox checked={selectedDonors.length === donors.length && donors.length > 0} onCheckedChange={handleSelectAll} /></TableHead>
-                  <TableHead onClick={() => handleSort('last_name')} className="cursor-pointer"><div className="flex items-center">Donor Name{renderSortIndicator('last_name')}</div></TableHead>
-                  <TableHead onClick={() => handleSort('is_company')} className="cursor-pointer"><div className="flex items-center">Type{renderSortIndicator('is_company')}</div></TableHead>
-                  <TableHead onClick={() => handleSort('age')} className="cursor-pointer"><div className="flex items-center">Age{renderSortIndicator('age')}</div></TableHead>
+                  <TableHead className="w-12">
+                    <Checkbox
+                      checked={
+                        selectedDonors.length === donors.length &&
+                        donors.length > 0
+                      }
+                      onCheckedChange={handleSelectAll}
+                    />
+                  </TableHead>
+                  <TableHead
+                    onClick={() => handleSort("last_name")}
+                    className="cursor-pointer"
+                  >
+                    <div className="flex items-center">
+                      Donor Name{renderSortIndicator("last_name")}
+                    </div>
+                  </TableHead>
+                  <TableHead
+                    onClick={() => handleSort("is_company")}
+                    className="cursor-pointer"
+                  >
+                    <div className="flex items-center">
+                      Type{renderSortIndicator("is_company")}
+                    </div>
+                  </TableHead>
+                  <TableHead
+                    onClick={() => handleSort("age")}
+                    className="cursor-pointer"
+                  >
+                    <div className="flex items-center">
+                      Age{renderSortIndicator("age")}
+                    </div>
+                  </TableHead>
                   <TableHead>Contact Info</TableHead>
                   <TableHead>Location</TableHead>
-                  <TableHead onClick={() => handleSort('total_donation_amount')} className="cursor-pointer"><div className="flex items-center">Total Donations{renderSortIndicator('total_donation_amount')}</div></TableHead>
-                  <TableHead onClick={() => handleSort('last_donation_date')} className="cursor-pointer"><div className="flex items-center">Last Donation{renderSortIndicator('last_donation_date')}</div></TableHead>
+                  <TableHead
+                    onClick={() => handleSort("total_donation_amount")}
+                    className="cursor-pointer"
+                  >
+                    <div className="flex items-center">
+                      Total Donations
+                      {renderSortIndicator("total_donation_amount")}
+                    </div>
+                  </TableHead>
+                  <TableHead
+                    onClick={() => handleSort("last_donation_date")}
+                    className="cursor-pointer"
+                  >
+                    <div className="flex items-center">
+                      Last Donation{renderSortIndicator("last_donation_date")}
+                    </div>
+                  </TableHead>
                   <TableHead>Tags</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
-                  <TableRow><TableCell colSpan={9} className="text-center py-8">Loading donors...</TableCell></TableRow>
+                  <TableRow>
+                    <TableCell colSpan={9} className="text-center py-8">
+                      Loading donors...
+                    </TableCell>
+                  </TableRow>
                 ) : donors.length === 0 ? (
-                  <TableRow><TableCell colSpan={9} className="text-center py-8">No donors found.</TableCell></TableRow>
+                  <TableRow>
+                    <TableCell colSpan={9} className="text-center py-8">
+                      No donors found.
+                    </TableCell>
+                  </TableRow>
                 ) : (
                   donors.map((donor) => (
-                    <TableRow key={donor.id} className="cursor-pointer hover:bg-slate-50" onClick={(e) => {
-                      if (e.target.type !== 'checkbox' && !e.target.closest('.checkbox-wrapper')) navigate(`/donors/${donor.id}`);
-                    }}>
-                      <TableCell className="checkbox-wrapper"><Checkbox checked={selectedDonors.includes(donor.id)} onCheckedChange={() => handleSelectRow(donor.id)} onClick={(e) => e.stopPropagation()} /></TableCell>
-                      <TableCell className="font-medium">{donor.is_company ? donor.organization_name : `${donor.first_name || ''} ${donor.last_name || ''}`}</TableCell>
-                      <TableCell>{donor.is_company ? "Company" : "Individual"}</TableCell>
-                      <TableCell>{donor.age || 'N/A'}</TableCell>
-                      <TableCell><div className="text-sm">{donor.email || "No email"}</div><div className="text-sm">{donor.phone_number || "No phone"}</div></TableCell>
-                      <TableCell>{[donor.city, donor.state, donor.country].filter(Boolean).join(", ") || "No location"}</TableCell>
-                      <TableCell>{donor.total_donation_amount ? `$${parseFloat(donor.total_donation_amount).toLocaleString()}` : "$0"}</TableCell>
-                      <TableCell>{donor.last_donation ? new Date(donor.last_donation.donation_date).toLocaleDateString() : "Never"}</TableCell>
-                      <TableCell><div className="flex flex-wrap gap-1">{donor.tags?.length ? donor.tags.slice(0, 3).map(tagRel => (<span key={tagRel.tag.id} className="px-2 py-1 text-xs rounded-full text-white" style={{ backgroundColor: tagRel.tag.color || '#6366f1' }}>{tagRel.tag.name}</span>)) : <span className="text-xs text-gray-500">No tags</span>}{donor.tags?.length > 3 && <span className="px-2 py-1 text-xs rounded-full bg-gray-200">+{donor.tags.length - 3}</span>}</div></TableCell>
+                    <TableRow
+                      key={donor.id}
+                      className="cursor-pointer hover:bg-slate-50"
+                      onClick={(e) => {
+                        if (
+                          e.target.type !== "checkbox" &&
+                          !e.target.closest(".checkbox-wrapper")
+                        )
+                          navigate(`/donors/${donor.id}`);
+                      }}
+                    >
+                      <TableCell className="checkbox-wrapper">
+                        <Checkbox
+                          checked={selectedDonors.includes(donor.id)}
+                          onCheckedChange={() => handleSelectRow(donor.id)}
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        {donor.is_company
+                          ? donor.organization_name
+                          : `${donor.first_name || ""} ${
+                              donor.last_name || ""
+                            }`}
+                      </TableCell>
+                      <TableCell>
+                        {donor.is_company ? "Company" : "Individual"}
+                      </TableCell>
+                      <TableCell>{donor.age || "N/A"}</TableCell>
+                      <TableCell>
+                        <div className="text-sm">
+                          {donor.email || "No email"}
+                        </div>
+                        <div className="text-sm">
+                          {donor.phone_number || "No phone"}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {[donor.city, donor.state, donor.country]
+                          .filter(Boolean)
+                          .join(", ") || "No location"}
+                      </TableCell>
+                      <TableCell>
+                        {donor.total_donation_amount
+                          ? `$${parseFloat(
+                              donor.total_donation_amount
+                            ).toLocaleString()}`
+                          : "$0"}
+                      </TableCell>
+                      <TableCell>
+                        {donor.last_donation
+                          ? new Date(
+                              donor.last_donation.donation_date
+                            ).toLocaleDateString()
+                          : "Never"}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                          {donor.tags?.length ? (
+                            donor.tags.slice(0, 3).map((tagRel) => (
+                              <span
+                                key={tagRel.tag.id}
+                                className="px-2 py-1 text-xs rounded-full text-white"
+                                style={{
+                                  backgroundColor:
+                                    tagRel.tag.color || "#6366f1",
+                                }}
+                              >
+                                {tagRel.tag.name}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="text-xs text-gray-500">
+                              No tags
+                            </span>
+                          )}
+                          {donor.tags?.length > 3 && (
+                            <span className="px-2 py-1 text-xs rounded-full bg-gray-200">
+                              +{donor.tags.length - 3}
+                            </span>
+                          )}
+                        </div>
+                      </TableCell>
                     </TableRow>
                   ))
                 )}
@@ -439,9 +527,25 @@ export default function Donors() {
         {pagination.totalPages > 1 && (
           <div className="mt-4 py-2 border-t flex justify-center">
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={() => handlePageChange(pagination.page - 1)} disabled={pagination.page === 1}>Previous</Button>
-              <span className="px-4">Page {pagination.page} of {pagination.totalPages}</span>
-              <Button variant="outline" size="sm" onClick={() => handlePageChange(pagination.page + 1)} disabled={pagination.page === pagination.totalPages}>Next</Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(pagination.page - 1)}
+                disabled={pagination.page === 1}
+              >
+                Previous
+              </Button>
+              <span className="px-4">
+                Page {pagination.page} of {pagination.totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(pagination.page + 1)}
+                disabled={pagination.page === pagination.totalPages}
+              >
+                Next
+              </Button>
             </div>
           </div>
         )}

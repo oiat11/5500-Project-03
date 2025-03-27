@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import { Decimal } from '@prisma/client/runtime/library';
 import {errorHandler} from "../utils/error.js";
 import csv from 'csv-parser';
 import { Readable } from 'stream';
@@ -294,6 +295,7 @@ export const deleteDonor = async (req, res) => {
   }
 };
 
+// function to import donors from CSV with update or create logic
 export const importDonorsCsv = async (req, res, next) => {
   try {
     if (!req.user) return next(errorHandler(401, 'Unauthorized: Please log in'));
@@ -319,15 +321,12 @@ export const importDonorsCsv = async (req, res, next) => {
       return isNaN(date.getTime()) ? null : date;
     };
 
-    const normalizeCity = (cityName) => {
-      return cityName?.replaceAll(' ', '_');
-    };
-
-    const normalizeEnum = (value) => {
-      return value?.trim()?.replace(/\s+/g, '_').replace(/-/g, '_') || null;
-    };
+    const normalizeCity = (cityName) => cityName?.replaceAll(' ', '_');
+    const normalizeEnum = (value) => value?.trim()?.replace(/\s+/g, '_').replace(/-/g, '_') || null;
 
     const importedDonors = [];
+    let createdCount = 0;
+    let updatedCount = 0;
 
     for (const row of results) {
       try {
@@ -364,19 +363,35 @@ export const importDonorsCsv = async (req, res, next) => {
           where: {
             first_name: donorData.first_name,
             last_name: donorData.last_name,
-            organization_name: donorData.organization_name
+            organization_name: donorData.organization_name,
+            street_address: donorData.street_address
           }
         });
 
         if (existingDonor) {
-          const updatedDonor = await prisma.donor.update({
-            where: { id: existingDonor.id },
-            data: donorData
+          const isDifferent = Object.entries(donorData).some(([key, value]) => {
+            const existingValue = existingDonor[key];
+
+            // Handle Date comparisons
+            if (value instanceof Date && existingValue instanceof Date) {
+              return value.getTime() !== existingValue.getTime();
+            }
+
+            return value !== existingValue;
           });
-          importedDonors.push(updatedDonor);
+
+          if (isDifferent) {
+            const updatedDonor = await prisma.donor.update({
+              where: { id: existingDonor.id },
+              data: donorData
+            });
+            importedDonors.push(updatedDonor);
+            updatedCount++;
+          }
         } else {
           const newDonor = await prisma.donor.create({ data: donorData });
           importedDonors.push(newDonor);
+          createdCount++;
         }
       } catch (error) {
         errors.push(`Row ${results.indexOf(row) + 1}: ${error.message}`);
@@ -385,8 +400,8 @@ export const importDonorsCsv = async (req, res, next) => {
 
     res.status(200).json({
       message: 'Donors imported successfully',
-      importedCount: importedDonors.length,
-      totalRows: results.length,
+      createdCount,
+      updatedCount,
       errors: errors.length > 0 ? errors : undefined
     });
   } catch (error) {
@@ -394,4 +409,3 @@ export const importDonorsCsv = async (req, res, next) => {
     next(error);
   }
 };
-
