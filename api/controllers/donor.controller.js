@@ -9,7 +9,10 @@ const prisma = new PrismaClient();
 export const createDonor = async (req, res, next) => {
   try {
     if (!req.user) {
-      return res.status(401).json({ message: 'Unauthorized: Please log in' });
+      const err = new Error('Unauthorized: Please log in');
+      err.statusCode = 401;
+      err.isPublic = true;
+      return next(err);
     }
 
     const {
@@ -37,48 +40,90 @@ export const createDonor = async (req, res, next) => {
       communication_restrictions,
       subscription_events_in_person,
       subscription_events_magazine,
-      communication_preference
+      communication_preference,
+      tagIds = []
     } = req.body;
 
     if (!pmm) {
-      return res.status(400).json({ message: 'PMM is required' });
+      const err = new Error('PMM is required');
+      err.statusCode = 400;
+      err.isPublic = true;
+      return next(err);
+    }
+
+    //Check for existing donor
+    const existingDonor = await prisma.donor.findFirst({
+      where: {
+        first_name,
+        last_name,
+        organization_name,
+        street_address
+      }
+    });
+
+    if (existingDonor) {
+      const err = new Error('Donor already exists with the same name and address.');
+      err.statusCode = 409;
+      err.isPublic = true;
+      return next(err);
     }
 
     const newDonor = await prisma.donor.create({
       data: {
         first_name,
-        nick_name,
+        nick_name: nick_name || null,
         last_name,
-        organization_name,
-        unit_number,
+        organization_name: organization_name || null,
+        unit_number: unit_number || null,
         street_address,
         city,
-        total_donations: total_donations || 0,
-        total_pledge,
-        largest_gift_amount,
-        largest_gift_appeal,
-        last_gift_amount,
-        last_gift_request,
-        last_gift_appeal,
-        first_gift_date,
+        total_donation_amount: total_donation_amount || 0,
+        total_pledge: total_pledge || null,
+        largest_gift_amount: largest_gift_amount || null,
+        largest_gift_appeal: largest_gift_appeal || null,
+        last_gift_amount: last_gift_amount || null,
+        last_gift_request: last_gift_request || null,
+        last_gift_appeal: last_gift_appeal || null,
+        first_gift_date: first_gift_date || null,
         pmm,
-        exclude: exclude || false,
-        deceased: deceased || false,
-        contact_phone_type: contact_phone_type || 'mobile',
-        phone_restrictions,
-        email_restrictions,
-        communication_restrictions,
-        subscription_events_in_person: subscription_events_in_person || 'opt_in',
-        subscription_events_magazine: subscription_events_magazine || 'opt_in',
-        communication_preference: communication_preference || 'Thank_you'
-      }
+        exclude: exclude ?? false,
+        deceased: deceased ?? false,
+        contact_phone_type: contact_phone_type || null,
+        phone_restrictions: phone_restrictions || null,
+        email_restrictions: email_restrictions || null,
+        communication_restrictions: communication_restrictions || null,
+        subscription_events_in_person: subscription_events_in_person || null,
+        subscription_events_magazine: subscription_events_magazine || null,
+        communication_preference: communication_preference || null,
+        tags: tagIds.length > 0
+          ? {
+              create: tagIds.map((tagId) => ({
+                tag: { connect: { id: tagId } },
+              })),
+            }
+          : undefined,
+      },
+      include: {
+        tags: {
+          include: {
+            tag: true,
+          },
+        },
+      },
     });
 
-    res.status(201).json({ message: 'Donor created successfully', donor: newDonor });
+    return res.status(201).json({
+      message: 'Donor created successfully',
+      donor: newDonor
+    });
+
   } catch (error) {
-    next(error);
+    console.error("Error creating donor:", error);
+    next(error); 
   }
 };
+
+
 
 // function to get all donors
 export const getAllDonors = async (req, res) => {
@@ -412,5 +457,92 @@ export const importDonorsCsv = async (req, res, next) => {
   } catch (error) {
     console.error('Error importing donors from CSV:', error);
     next(error);
+  }
+};
+
+export const recommendDonors = async (req, res, next) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ message: 'Unauthorized: Please log in' });
+    }
+
+    const { tagIds = [], count = 10 } = req.body;
+    
+    if (tagIds.length === 0) {
+      const topDonors = await prisma.donor.findMany({
+        where: {
+          exclude: false,
+          deceased: false
+        },
+        orderBy: {
+          total_donation_amount: 'desc'
+        },
+        take: count,
+        include: {
+          tags: {
+            include: {
+              tag: true
+            }
+          }
+        }
+      });
+      
+      const formattedDonors = topDonors.map(donor => ({
+        value: donor.id,
+        label: donor.organization_name || `${donor.first_name} ${donor.last_name}`,
+        tags: donor.tags.map(t => t.tag),
+        totalDonation: donor.total_donation_amount || 0,
+        city: donor.city
+      }));
+      
+      return res.status(200).json({ donors: formattedDonors });
+    }
+    
+    const donorsWithTags = await prisma.donor.findMany({
+      where: {
+        exclude: false,
+        deceased: false,
+        tags: {
+          some: {
+            tag_id: {
+              in: tagIds
+            }
+          }
+        }
+      },
+      include: {
+        tags: {
+          include: {
+            tag: true
+          }
+        }
+      }
+    });
+    
+    const scoredDonors = donorsWithTags.map(donor => {
+      const matchingTagCount = donor.tags.filter(t => 
+        tagIds.includes(t.tagId)
+      ).length;
+      
+      return {
+        donor,
+        score: matchingTagCount + (donor.total_donation_amount / 10000 || 0)
+      };
+    });
+    
+    const recommendedDonors = scoredDonors
+      .sort((a, b) => b.score - a.score)
+      .slice(0, count)
+      .map(item => ({
+        value: item.donor.id,
+        label: item.donor.organization_name || `${item.donor.first_name} ${item.donor.last_name}`,
+        tags: item.donor.tags.map(t => t.tag),
+        totalDonation: item.donor.total_donation_amount || 0,
+        city: item.donor.city
+      }));
+    
+    res.status(200).json({ donors: recommendedDonors });
+  } catch (error) {
+    next(errorHandler(error));
   }
 };

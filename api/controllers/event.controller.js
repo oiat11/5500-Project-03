@@ -5,7 +5,7 @@ const prisma = new PrismaClient();
 
 // Create Event with Tags and Donors
 export const createEventWithDonors = async (req, res, next) => {
-  const { name, description, date, location, tagIds = [], donors = [] } = req.body;
+  const { name, description, date, location, tagIds = [], donors = [], status, donor_count } = req.body;
 
   try {
     const event = await prisma.event.create({
@@ -14,9 +14,11 @@ export const createEventWithDonors = async (req, res, next) => {
         description,
         date: new Date(date),
         location,
+        status,
         tags: {
           connect: tagIds.map((id) => ({ id })),
         },
+        donor_count,
         donors: {
           create: donors.map((d) => ({
             donor: { connect: { id: d.donorId } },

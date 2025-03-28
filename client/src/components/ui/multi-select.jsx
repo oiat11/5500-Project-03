@@ -45,24 +45,36 @@ export function MultiSelect({
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className={cn("w-full justify-between", className)}
+          className={cn(
+            "w-full justify-between h-auto min-h-10 py-2", 
+            className
+          )}
           onClick={() => setOpen(!open)}
           disabled={isLoading}
         >
           {isLoading ? (
             <span className="text-muted-foreground">Loading...</span>
           ) : value.length > 0 ? (
-            <div className="flex flex-wrap gap-1 max-w-[90%] overflow-hidden">
+            <div className="flex flex-wrap gap-1 w-full overflow-hidden">
               {value.map((option) => (
                 <Badge
                   key={option.value}
                   variant="secondary"
-                  className="mr-1 mb-1"
+                  className="mr-1 mb-1 flex items-center gap-1"
+                  style={{ 
+                    backgroundColor: option.color ? `${option.color}20` : undefined,
+                    borderColor: option.color,
+                    color: option.color
+                  }}
                   onClick={(e) => {
                     e.stopPropagation();
                     handleRemove(option);
                   }}
                 >
+                  <span 
+                    className="h-2 w-2 rounded-full flex-shrink-0" 
+                    style={{ backgroundColor: option.color }}
+                  />
                   {option.label}
                   <X className="ml-1 h-3 w-3" />
                 </Badge>
@@ -95,7 +107,13 @@ export function MultiSelect({
                     >
                       {isSelected && <Check className="h-3 w-3 text-primary-foreground" />}
                     </div>
-                    <span>{option.label}</span>
+                    <div className="flex items-center gap-2">
+                      <span 
+                        className="h-3 w-3 rounded-full flex-shrink-0" 
+                        style={{ backgroundColor: option.color }}
+                      />
+                      <span>{option.label}</span>
+                    </div>
                   </div>
                 </CommandItem>
               );
