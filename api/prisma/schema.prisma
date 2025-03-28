@@ -62,13 +62,13 @@ model Donor {
   exclude                 Boolean?
   deceased                Boolean?
 
-  contact_phone_type           ContactPhoneType    
+  contact_phone_type           ContactPhoneType?    
   phone_restrictions           String?
   email_restrictions           String?
   communication_restrictions  String?
-  subscription_events_in_person SubscriptionStatus
-  subscription_events_magazine SubscriptionStatus
-  communication_preference     CommunicationType?
+  subscription_events_in_person SubscriptionPreference?
+  subscription_events_magazine SubscriptionPreference?
+  communication_preference CommunicationPreference?
 
   tags                    DonorTag[]
   events                  DonorEvent[]
@@ -158,12 +158,12 @@ enum ContactPhoneType {
   Mobile
 }
 
-enum SubscriptionStatus {
+enum SubscriptionPreference {
   Opt_out
   Opt_in
 }
 
-enum CommunicationType {
+enum CommunicationPreference {
   Thank_you
   Magazine
   Inspiration_event
