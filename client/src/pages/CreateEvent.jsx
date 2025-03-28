@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/components/ui/toast";
 import { MultiSelect } from "@/components/ui/multi-select";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import axios from "axios";
 
 export default function CreateEvent() {
   const navigate = useNavigate();
@@ -62,23 +63,19 @@ export default function CreateEvent() {
     const fetchDonors = async () => {
       setLoadingDonors(true);
       try {
-        const res = await fetch("/api/donor/all", {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
+        const response = await axios.get("/api/donor/all", {
+          withCredentials: true
         });
         
-        if (!res.ok) throw new Error("Failed to fetch donors");
-        
-        const data = await res.json();
-        setDonors(data.donors.map(donor => ({
-          value: donor.id,
-          label: donor.first_name + " " + donor.last_name
-        })));
+        if (response.data) {
+          setDonors(response.data.donors.map(donor => ({
+            value: donor.id,
+            label: donor.first_name + " " + donor.last_name
+          })));
+        }
       } catch (err) {
         console.error("Error fetching donors:", err);
-        setError("Failed to load donors. Please try again.");
+        setError(err.response?.data?.message || "Failed to load donors. Please try again.");
       } finally {
         setLoadingDonors(false);
       }

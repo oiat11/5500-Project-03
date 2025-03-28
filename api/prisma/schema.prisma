@@ -68,7 +68,7 @@ model Donor {
   communication_restrictions  String?
   subscription_events_in_person SubscriptionStatus
   subscription_events_magazine SubscriptionStatus
-  communication_preference     CommunicationType
+  communication_preference     CommunicationType?
 
   tags                    DonorTag[]
   events                  DonorEvent[]
@@ -146,14 +146,14 @@ enum ParticipationStatus {
 }
 
 enum ContactPhoneType {
-  home
-  mobile
-  work
+  Home
+  Work
+  Mobile
 }
 
 enum SubscriptionStatus {
-  opt_in
-  opt_out
+  Opt_out
+  Opt_in
 }
 
 enum CommunicationType {
@@ -179,4 +179,20 @@ enum City {
   Surrey
   Burnaby
   Richmond
+  North_Vancouver
+  White_Rock
+  Coquitlam
+  West_Vancouver
+  New_Westminster
+  Prince_George
+  Williams_Lake
+  Delta
+  Abbotsford
+  Maple_Ridge
+  Kelowna
+  Langley
+  Port_Coquitlam
+  Vernon
+  Kamloops
+  Salmon_Arm
 }
