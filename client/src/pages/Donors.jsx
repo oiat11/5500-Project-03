@@ -67,42 +67,36 @@ export default function Donors() {
         search,
         sortBy: sorting.column,
         sortOrder: sorting.direction,
+        includeFields: 'total_donations,largest_gift_appeal,city,contact_phone_type,phone_restrictions,email_restrictions,communication_restrictions'
       };
-      if (filters.minAge) params.minAge = filters.minAge;
-      if (filters.maxAge) params.maxAge = filters.maxAge;
+      
+      // Add other parameters for filtering...
       if (filters.minDonationAmount)
         params.minDonationAmount = filters.minDonationAmount;
       if (filters.maxDonationAmount)
         params.maxDonationAmount = filters.maxDonationAmount;
-      if (filters.minDonationCount)
-        params.minDonationCount = filters.minDonationCount;
-      if (filters.maxDonationCount)
-        params.maxDonationCount = filters.maxDonationCount;
-      if (filters.gender && filters.gender !== "all")
-        params.gender = filters.gender;
-      if (filters.isCompany !== undefined) params.isCompany = filters.isCompany;
+      if (filters.largestGiftAppeal)
+        params.largestGiftAppeal = filters.largestGiftAppeal;
+      if (filters.contactPhoneType && filters.contactPhoneType !== "all")
+        params.contactPhoneType = filters.contactPhoneType;
+      if (filters.phoneRestrictions)
+        params.phoneRestrictions = filters.phoneRestrictions;
+      if (filters.emailRestrictions)
+        params.emailRestrictions = filters.emailRestrictions;
+      if (filters.communicationRestrictions)
+        params.communicationRestrictions = filters.communicationRestrictions;
+      
+      // Handle company type filter if isCompany is still set
+      if (filters.isCompany !== undefined) {
+        params.isCompany = filters.isCompany;
+      }
 
       // Handle array parameters
-      if (filters.locations && filters.locations.length > 0) {
-        params.location = filters.locations;
+      if (filters.cities && filters.cities.length > 0) {
+        params.city = filters.cities;
       }
-
-      // Handle interest domains with level filtering
-      if (filters.interestDomains && filters.interestDomains.length > 0) {
-        params.interestDomains = filters.interestDomains.map(
-          (domain) => domain.name
-        );
-
-        // Add interest level parameters for each domain
-        filters.interestDomains.forEach((domain, index) => {
-          params[`interestDomainLevel_${index}_name`] = domain.name;
-          params[`interestDomainLevel_${index}_min`] = domain.minLevel;
-          params[`interestDomainLevel_${index}_max`] = domain.maxLevel;
-        });
-
-        params.interestDomainsCount = filters.interestDomains.length;
-      }
-
+      
+      // Handle tags filter
       if (filters.tags && filters.tags.length > 0) {
         params.tags = filters.tags;
       }
@@ -111,7 +105,7 @@ export default function Donors() {
       setDonors(response.data.donors);
       setPagination(response.data.pagination);
 
-      // Store available filters for the filter component
+      // Store available tags for the filter component
       if (response.data.filters) {
         setAvailableFilters(response.data.filters);
       }
@@ -176,9 +170,13 @@ export default function Donors() {
         direction: newDirection,
       };
     });
+  };
+
+  // Apply sorting and refetch
+  useEffect(() => {
     // Refetch with new sorting
     fetchDonors(pagination.page, searchTerm, activeFilters);
-  };
+  }, [sorting]);
 
   // Render sort indicator
   const renderSortIndicator = (column) => {
@@ -359,8 +357,8 @@ export default function Donors() {
         </div>
 
         <div className="overflow-x-auto">
-          <div className="min-w-[1100px]">
-            <Table className="w-full table-fixed">
+          <div className="min-w-[1200px]">
+            <Table className="w-full">
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-12">
@@ -374,48 +372,38 @@ export default function Donors() {
                   </TableHead>
                   <TableHead
                     onClick={() => handleSort("last_name")}
-                    className="cursor-pointer"
+                    className="cursor-pointer w-[15%]"
                   >
                     <div className="flex items-center">
                       Donor Name{renderSortIndicator("last_name")}
                     </div>
                   </TableHead>
                   <TableHead
-                    onClick={() => handleSort("is_company")}
-                    className="cursor-pointer"
-                  >
-                    <div className="flex items-center">
-                      Type{renderSortIndicator("is_company")}
-                    </div>
-                  </TableHead>
-                  <TableHead
-                    onClick={() => handleSort("age")}
-                    className="cursor-pointer"
-                  >
-                    <div className="flex items-center">
-                      Age{renderSortIndicator("age")}
-                    </div>
-                  </TableHead>
-                  <TableHead>Contact Info</TableHead>
-                  <TableHead>Location</TableHead>
-                  <TableHead
                     onClick={() => handleSort("total_donation_amount")}
-                    className="cursor-pointer"
+                    className="cursor-pointer w-[10%]"
                   >
                     <div className="flex items-center">
-                      Total Donations
-                      {renderSortIndicator("total_donation_amount")}
+                      Total Donations{renderSortIndicator("total_donation_amount")}
                     </div>
                   </TableHead>
-                  <TableHead
-                    onClick={() => handleSort("last_donation_date")}
-                    className="cursor-pointer"
-                  >
-                    <div className="flex items-center">
-                      Last Donation{renderSortIndicator("last_donation_date")}
-                    </div>
+                  <TableHead className="w-[12%]">
+                    Largest Gift Appeal
                   </TableHead>
-                  <TableHead>Tags</TableHead>
+                  <TableHead className="w-[10%]">
+                    City
+                  </TableHead>
+                  <TableHead className="w-[12%]">
+                    Contact Phone Type
+                  </TableHead>
+                  <TableHead className="w-[12%]">
+                    Phone Restrictions
+                  </TableHead>
+                  <TableHead className="w-[12%]">
+                    Email Restrictions
+                  </TableHead>
+                  <TableHead className="w-[12%]">
+                    Communication Restrictions
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -451,70 +439,41 @@ export default function Donors() {
                           onClick={(e) => e.stopPropagation()}
                         />
                       </TableCell>
-                      <TableCell className="font-medium">
+                      <TableCell className="font-medium whitespace-normal">
                         {donor.is_company
-                          ? donor.organization_name
+                          ? (donor.organization_name || "Unnamed Organization")
                           : `${donor.first_name || ""} ${
                               donor.last_name || ""
-                            }`}
+                            }`.trim() || "Unnamed Donor"}
                       </TableCell>
-                      <TableCell>
-                        {donor.is_company ? "Company" : "Individual"}
-                      </TableCell>
-                      <TableCell>{donor.age || "N/A"}</TableCell>
-                      <TableCell>
-                        <div className="text-sm">
-                          {donor.email || "No email"}
-                        </div>
-                        <div className="text-sm">
-                          {donor.phone_number || "No phone"}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {[donor.city, donor.state, donor.country]
-                          .filter(Boolean)
-                          .join(", ") || "No location"}
-                      </TableCell>
-                      <TableCell>
+                      <TableCell className="whitespace-nowrap">
                         {donor.total_donation_amount
                           ? `$${parseFloat(
                               donor.total_donation_amount
                             ).toLocaleString()}`
                           : "$0"}
                       </TableCell>
-                      <TableCell>
-                        {donor.last_donation
-                          ? new Date(
-                              donor.last_donation.donation_date
-                            ).toLocaleDateString()
-                          : "Never"}
+                      <TableCell className="truncate max-w-[150px]" title={donor.largest_gift_appeal || "N/A"}>
+                        {donor.largest_gift_appeal || "N/A"}
                       </TableCell>
-                      <TableCell>
-                        <div className="flex flex-wrap gap-1">
-                          {donor.tags?.length ? (
-                            donor.tags.slice(0, 3).map((tagRel) => (
-                              <span
-                                key={tagRel.tag.id}
-                                className="px-2 py-1 text-xs rounded-full text-white"
-                                style={{
-                                  backgroundColor:
-                                    tagRel.tag.color || "#6366f1",
-                                }}
-                              >
-                                {tagRel.tag.name}
-                              </span>
-                            ))
-                          ) : (
-                            <span className="text-xs text-gray-500">
-                              No tags
-                            </span>
-                          )}
-                          {donor.tags?.length > 3 && (
-                            <span className="px-2 py-1 text-xs rounded-full bg-gray-200">
-                              +{donor.tags.length - 3}
-                            </span>
-                          )}
-                        </div>
+                      <TableCell className="whitespace-nowrap">
+                        {typeof donor.city === 'string' 
+                          ? donor.city.replace(/_/g, ' ')  // Replace underscores with spaces
+                          : "N/A"}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        {typeof donor.contact_phone_type === 'string'
+                          ? donor.contact_phone_type.replace(/_/g, ' ')
+                          : "N/A"}
+                      </TableCell>
+                      <TableCell className="truncate max-w-[150px]" title={donor.phone_restrictions || "None"}>
+                        {donor.phone_restrictions || "None"}
+                      </TableCell>
+                      <TableCell className="truncate max-w-[150px]" title={donor.email_restrictions || "None"}>
+                        {donor.email_restrictions || "None"}
+                      </TableCell>
+                      <TableCell className="truncate max-w-[150px]" title={donor.communication_restrictions || "None"}>
+                        {donor.communication_restrictions || "None"}
                       </TableCell>
                     </TableRow>
                   ))

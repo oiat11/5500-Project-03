@@ -23,7 +23,7 @@ export const createDonor = async (req, res, next) => {
       unit_number,
       street_address,
       city,
-      total_donation_amount,
+      total_donations,
       total_pledge,
       largest_gift_amount,
       largest_gift_appeal,
@@ -383,7 +383,7 @@ export const importDonorsCsv = async (req, res, next) => {
           unit_number: row.address_line2 || null,
           street_address: row.address_line1,
           city: normalizeCity(row.city),
-          total_donation_amount: parseFloat(row.total_donation_amount) || 0,
+          total_donation_amount: parseFloat(row.total_donations) || 0,
           total_pledge: row.total_pledge ? parseFloat(row.total_pledge) : null,
           largest_gift_amount: row.largest_gift_amount ? parseFloat(row.largest_gift_amount) : null,
           largest_gift_appeal: row.largest_gift_appeal || null,
@@ -401,38 +401,43 @@ export const importDonorsCsv = async (req, res, next) => {
           communication_restrictions: row.communication_restrictions || null,
           subscription_events_in_person: normalizeEnum(row.subscription_events_in_person),
           subscription_events_magazine: normalizeEnum(row.subscription_events_magazine),
-          communication_preference: normalizeEnum(row.communication_preference)
+          communication_preference: normalizeEnum(row.communication_preference),
+          is_deleted: false,
+          deleted_at: null
         };
 
-        const existingDonor = await prisma.donor.findFirst({
+        // First try to find an active donor
+        let existingDonor = await prisma.donor.findFirst({
           where: {
             first_name: donorData.first_name,
             last_name: donorData.last_name,
             organization_name: donorData.organization_name,
-            street_address: donorData.street_address
+            street_address: donorData.street_address,
+            is_deleted: false
           }
         });
 
-        if (existingDonor) {
-          const isDifferent = Object.entries(donorData).some(([key, value]) => {
-            const existingValue = existingDonor[key];
-
-            // Handle Date comparisons
-            if (value instanceof Date && existingValue instanceof Date) {
-              return value.getTime() !== existingValue.getTime();
+        // If no active donor found, look for a deleted one
+        if (!existingDonor) {
+          existingDonor = await prisma.donor.findFirst({
+            where: {
+              first_name: donorData.first_name,
+              last_name: donorData.last_name,
+              organization_name: donorData.organization_name,
+              street_address: donorData.street_address,
+              is_deleted: true
             }
-
-            return value !== existingValue;
           });
+        }
 
-          if (isDifferent) {
-            const updatedDonor = await prisma.donor.update({
-              where: { id: existingDonor.id },
-              data: donorData
-            });
-            importedDonors.push(updatedDonor);
-            updatedCount++;
-          }
+        if (existingDonor) {
+          // Update the donor (this will also restore if it was deleted)
+          const updatedDonor = await prisma.donor.update({
+            where: { id: existingDonor.id },
+            data: donorData
+          });
+          importedDonors.push(updatedDonor);
+          updatedCount++;
         } else {
           const newDonor = await prisma.donor.create({ data: donorData });
           importedDonors.push(newDonor);
