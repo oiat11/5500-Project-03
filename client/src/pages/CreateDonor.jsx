@@ -6,6 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import axios from "axios";
 import { MultiSelect } from "@/components/ui/multi-select";
 import { useToast } from "@/components/ui/toast";
 import { PlusCircle } from "lucide-react";
@@ -178,14 +179,14 @@ export default function CreateDonor() {
     };
 
     try {
-      const response = await fetch("/api/donor/", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(processedData),
+      const response = await axios.post("/api/donor/", processedData, {
+        withCredentials: true
       });
 
+      if (response.data) {
+        setSuccessMessage("Donor created successfully!");
+        navigate("/donors");
+      }
       if (!response.ok) {
         throw new Error("Failed to create donor");
       }
@@ -197,7 +198,7 @@ export default function CreateDonor() {
       navigate("/donors");
     } catch (error) {
       console.error("Error creating donor:", error);
-      setErrorMessage(error.message);
+      setErrorMessage(error.response?.data?.message || error.message);
     }
   };
 

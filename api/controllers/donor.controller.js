@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import { Decimal } from '@prisma/client/runtime/library';
 import {errorHandler} from "../utils/error.js";
 import csv from 'csv-parser';
 import { Readable } from 'stream';
@@ -92,6 +93,7 @@ export const createDonor = async (req, res, next) => {
   }
 };
 
+// function to get all donors
 export const getAllDonors = async (req, res) => {
   try {
     if (!req.user) {
@@ -128,294 +130,99 @@ export const getAllDonors = async (req, res) => {
   }
 };
 
-
-export const getDonors = async (req, res) => {
+// function to get donors with search, pagination, filters, and pmm search
+export const getDonors = async (req, res, next) => {
   try {
-    if (!req.user) {
-      return res.status(401).json({ message: 'Unauthorized: Please log in' });
-    }
+    if (!req.user) return next(errorHandler(401, 'Unauthorized: Please log in'));
 
-    const { 
+    const {
       search,
-      page = 1, 
+      page = 1,
       limit = 10,
       sortBy = 'created_at',
       sortOrder = 'desc',
-      isCompany,
-      minAge,
-      maxAge,
       minDonationAmount,
       maxDonationAmount,
-      minDonationCount,
-      maxDonationCount,
-      gender,
-      location,
-      interestDomains,
-      donorType,
-      tags
+      tags,
+      city,
+      pmm
     } = req.query;
 
-    // Convert page and limit to numbers
     const pageNum = parseInt(page);
     const limitNum = parseInt(limit);
     const skip = (pageNum - 1) * limitNum;
 
-    // Build the where clause based on search parameters
-    let whereClause = {
-      is_deleted: false
-    };
+    let whereClause = { is_deleted: false };
 
-    // Filter by company status if provided
-    if (isCompany !== undefined) {
-      whereClause.is_company = isCompany === 'true';
+    // city filter allow multiple cities
+    if (city) {
+      const cities = Array.isArray(city) ? city : [city];
+      whereClause.city = { in: cities };
     }
 
-    // Add search functionality
-    if (search) {
-      whereClause.OR = [
-        { first_name: { contains: search } },
-        { last_name: { contains: search } },
-        { organization_name: { contains: search } },
-        { email: { contains: search } },
-        { phone_number: { contains: search } },
-        { address: { contains: search } },
-        { city: { contains: search } },
-        { state: { contains: search } },
-        { postal_code: { contains: search } }
-      ];
+    // pmm filter (partial match)
+    if (pmm) {
+      whereClause.pmm = { contains: pmm };
     }
 
-    // Age filter
-    if (minAge !== undefined) {
-      whereClause.age = {
-        ...whereClause.age,
-        gte: parseInt(minAge)
-      };
-    }
-    if (maxAge !== undefined) {
-      whereClause.age = {
-        ...whereClause.age,
-        lte: parseInt(maxAge)
-      };
-    }
-
-    // Gender filter
-    if (gender && gender !== 'all') {
-      whereClause.gender = gender;
-    }
-
-    // Location filter
-    if (location) {
-      const locations = Array.isArray(location) ? location : [location];
-      whereClause.OR = [
-        ...(whereClause.OR || []),
-        ...locations.map(loc => ({ 
-          city: { contains: loc } 
-        })),
-        ...locations.map(loc => ({ 
-          state: { contains: loc } 
-        })),
-        ...locations.map(loc => ({ 
-          country: { contains: loc } 
-        }))
-      ];
-    }
-
-    // Total donation amount filter
-    if (minDonationAmount !== undefined) {
-      whereClause.total_donation_amount = {
-        ...whereClause.total_donation_amount,
-        gte: parseFloat(minDonationAmount)
-      };
-    }
-    if (maxDonationAmount !== undefined) {
-      whereClause.total_donation_amount = {
-        ...whereClause.total_donation_amount,
-        lte: parseFloat(maxDonationAmount)
-      };
-    }
-
-    // Total donation count filter
-    if (minDonationCount !== undefined) {
-      whereClause.total_donations_count = {
-        ...whereClause.total_donations_count,
-        gte: parseInt(minDonationCount)
-      };
-    }
-    if (maxDonationCount !== undefined) {
-      whereClause.total_donations_count = {
-        ...whereClause.total_donations_count,
-        lte: parseInt(maxDonationCount)
-      };
-    }
-
-    // Interest domains filter
-    let interestDomainsFilter = {};
-    if (interestDomains) {
-      const domains = Array.isArray(interestDomains) 
-        ? interestDomains 
-        : [interestDomains];
-      
-      // Check if we have interest domain level filters
-      if (req.query.interestDomainsCount) {
-        const count = parseInt(req.query.interestDomainsCount);
-        
-        // Build a complex filter with level constraints for each domain
-        const domainFilters = [];
-        
-        for (let i = 0; i < count; i++) {
-          const domainName = req.query[`interestDomainLevel_${i}_name`];
-          const minLevel = parseInt(req.query[`interestDomainLevel_${i}_min`]) || 1;
-          const maxLevel = parseInt(req.query[`interestDomainLevel_${i}_max`]) || 5;
-          
-          if (domainName) {
-            domainFilters.push({
-              interest_domains: {
-                some: {
-                  interest_domain: {
-                    name: domainName
-                  },
-                  level: {
-                    gte: minLevel,
-                    lte: maxLevel
-                  }
-                }
-              }
-            });
-          }
-        }
-        
-        if (domainFilters.length > 0) {
-          interestDomainsFilter = {
-            OR: domainFilters
-          };
-        }
-      } else {
-        // Simple domain name filtering (backward compatibility)
-        interestDomainsFilter = {
-          interest_domains: {
-            some: {
-              interest_domain: {
-                name: {
-                  in: domains
-                }
-              }
-            }
-          }
-        };
+    // Donation filter
+    if (minDonationAmount !== undefined || maxDonationAmount !== undefined) {
+      whereClause.total_donation_amount = {};
+      if (minDonationAmount !== undefined) {
+        whereClause.total_donation_amount.gte = parseFloat(minDonationAmount);
+      }
+      if (maxDonationAmount !== undefined) {
+        whereClause.total_donation_amount.lte = parseFloat(maxDonationAmount);
       }
     }
 
     // Tags filter
-    let tagsFilter = {};
-    if (tags) {
-      const tagList = Array.isArray(tags) ? tags : [tags];
-      tagsFilter = {
-        tags: {
-          some: {
-            tag: {
-              name: {
-                in: tagList
+    const tagsFilter = tags
+      ? {
+          tags: {
+            some: {
+              tag: {
+                name: {
+                  in: Array.isArray(tags) ? tags : [tags]
+                }
               }
             }
           }
         }
+      : {};
+
+    // Search filter
+    let searchFilter = {};
+    if (search) {
+      searchFilter = {
+        OR: [
+          { first_name: { contains: search } },
+          { last_name: { contains: search } },
+          { organization_name: { contains: search } }
+        ]
       };
     }
 
-    // Count total donors matching the criteria
+    const finalWhere = {
+      ...whereClause,
+      ...tagsFilter,
+      ...searchFilter
+    };
+
     const totalDonors = await prisma.donor.count({
-      where: {
-        ...whereClause,
-        ...interestDomainsFilter,
-        ...tagsFilter
-      }
+      where: finalWhere 
     });
 
-    // Fetch donors with pagination, sorting and filtering
     const donors = await prisma.donor.findMany({
-      where: {
-        ...whereClause,
-        ...interestDomainsFilter,
-        ...tagsFilter
-      },
+      where: finalWhere,
       include: {
-        last_donation: true,
-        tags: {
-          include: {
-            tag: true
-          }
-        },
-        interest_domains: {
-          include: {
-            interest_domain: true
-          }
-        }
+        tags: { include: { tag: true } },
+        events: true
       },
-      orderBy: {
-        [sortBy]: sortOrder
-      },
+      orderBy: { [sortBy]: sortOrder },
       skip,
       take: limitNum
     });
-
-    // Get all available interest domains and tags for filters
-    const allInterestDomains = await prisma.interestDomain.findMany({
-      select: {
-        id: true,
-        name: true
-      }
-    });
-
-    const allTags = await prisma.tag.findMany({
-      where: {
-        is_deleted: false
-      },
-      select: {
-        id: true,
-        name: true,
-        color: true
-      }
-    });
-
-    // Get all locations for filters
-    const cities = await prisma.donor.groupBy({
-      by: ['city'],
-      where: {
-        city: {
-          not: null
-        },
-        is_deleted: false
-      }
-    });
-
-    const states = await prisma.donor.groupBy({
-      by: ['state'],
-      where: {
-        state: {
-          not: null
-        },
-        is_deleted: false
-      }
-    });
-
-    const countries = await prisma.donor.groupBy({
-      by: ['country'],
-      where: {
-        country: {
-          not: null
-        },
-        is_deleted: false
-      }
-    });
-
-    const locations = {
-      cities: cities.map(c => c.city).filter(Boolean),
-      states: states.map(s => s.state).filter(Boolean),
-      countries: countries.map(c => c.country).filter(Boolean)
-    };
-
-    const totalPages = Math.ceil(totalDonors / limitNum);
 
     res.status(200).json({
       donors,
@@ -423,54 +230,33 @@ export const getDonors = async (req, res) => {
         total: totalDonors,
         page: pageNum,
         limit: limitNum,
-        totalPages
-      },
-      filters: {
-        interestDomains: allInterestDomains,
-        tags: allTags,
-        locations
+        totalPages: Math.ceil(totalDonors / limitNum)
       }
     });
   } catch (error) {
-    console.error('Error fetching donors:', error);
-    res.status(500).json({ message: 'Error fetching donors', error: error.message });
+    next(error);
   }
 };
 
+
+
+
 export const getDonorById = async (req, res) => {
   try {
-    if (!req.user) {
-      return res.status(401).json({ message: 'Unauthorized: Please log in' });
-    }
+    if (!req.user) return res.status(401).json({ message: 'Unauthorized: Please log in' });
 
     const { id } = req.params;
 
     const donor = await prisma.donor.findUnique({
-      where: { id, is_deleted: false },
+      where: { id },
       include: {
-        last_donation: true,
-        donations: {
-          include: {
-            donation: true
-          }
-        },
-        tags: {
-          include: {
-            tag: true
-          }
-        },
-        interest_domains: {
-          include: {
-            interest_domain: true
-          }
-        },
-        communications: true
+        tags: { include: { tag: true } },
+        interest_domains: { include: { interest_domain: true } },
+        events: true
       }
     });
 
-    if (!donor) {
-      return res.status(404).json({ message: 'Donor not found' });
-    }
+    if (!donor) return res.status(404).json({ message: 'Donor not found' });
 
     res.status(200).json(donor);
   } catch (error) {
@@ -480,23 +266,15 @@ export const getDonorById = async (req, res) => {
 
 export const updateDonor = async (req, res) => {
   try {
-    if (!req.user) {
-      return res.status(401).json({ message: 'Unauthorized: Please log in' });
-    }
+    if (!req.user) return res.status(401).json({ message: 'Unauthorized: Please log in' });
 
     const { id } = req.params;
     const updateData = req.body;
 
-    // Check if donor exists
-    const existingDonor = await prisma.donor.findUnique({
-      where: { id, is_deleted: false }
-    });
-
-    if (!existingDonor) {
+    const existingDonor = await prisma.donor.findUnique({ where: { id } });
+    if (!existingDonor || existingDonor.is_deleted)
       return res.status(404).json({ message: 'Donor not found' });
-    }
 
-    // Update donor
     const updatedDonor = await prisma.donor.update({
       where: { id },
       data: updateData
@@ -511,25 +289,16 @@ export const updateDonor = async (req, res) => {
 
 export const deleteDonor = async (req, res) => {
   try {
-    if (!req.user) {
-      return res.status(401).json({ message: 'Unauthorized: Please log in' });
-    }
+    if (!req.user) return res.status(401).json({ message: 'Unauthorized: Please log in' });
 
     const { id } = req.params;
-
-    // Check if donor exists
-    const existingDonor = await prisma.donor.findUnique({
-      where: { id, is_deleted: false }
-    });
-
-    if (!existingDonor) {
+    const existingDonor = await prisma.donor.findUnique({ where: { id } });
+    if (!existingDonor || existingDonor.is_deleted)
       return res.status(404).json({ message: 'Donor not found' });
-    }
 
-    // Soft delete the donor (set is_deleted flag to true)
     await prisma.donor.update({
       where: { id },
-      data: { is_deleted: true }
+      data: { is_deleted: true, deleted_at: new Date() }
     });
 
     res.status(200).json({ message: 'Donor deleted successfully' });
@@ -539,57 +308,19 @@ export const deleteDonor = async (req, res) => {
   }
 };
 
-// Helper function to validate and format donor data from CSV
-const validateDonorData = (data) => {
-  const donor = {};
-  
-  // Required fields with defaults
-  donor.first_name = data.first_name || null;
-  donor.last_name = data.last_name || null;
-  donor.organization_name = data.organization_name || null;
-  donor.email = data.email || null;
-  donor.phone_number = data.phone_number || null;
-  donor.is_company = data.is_company === 'true' || data.is_company === true || false;
-  
-  // Optional fields with defaults
-  donor.gender = data.gender || null;
-  donor.age = data.age ? parseInt(data.age) : null;
-  donor.address = data.address || null;
-  donor.city = data.city || null;
-  donor.state = data.state || null;
-  donor.postal_code = data.postal_code || null;
-  donor.country = data.country || null;
-  donor.total_donation_amount = data.total_donation_amount ? parseFloat(data.total_donation_amount) : 0;
-  donor.total_donations_count = data.total_donations_count ? parseInt(data.total_donations_count) : 0;
-  donor.anonymous_donation_preference = data.anonymous_donation_preference === 'true' || data.anonymous_donation_preference === true || false;
-  
-  // Validate email if provided (must be unique)
-  if (donor.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(donor.email)) {
-    throw new Error(`Invalid email format: ${donor.email}`);
-  }
-  
-  return donor;
-};
-
-export const importDonorsCsv = async (req, res) => {
+// function to import donors from CSV with update or create logic
+export const importDonorsCsv = async (req, res, next) => {
   try {
-    if (!req.user) {
-      return res.status(401).json({ message: 'Unauthorized: Please log in' });
-    }
-    
-    if (!req.file) {
-      return res.status(400).json({ message: 'No CSV file uploaded' });
-    }
-    
+    if (!req.user) return next(errorHandler(401, 'Unauthorized: Please log in'));
+    if (!req.file) return res.status(400).json({ message: 'No CSV file uploaded' });
+
     const results = [];
     const errors = [];
-    
-    // Create a readable stream from the buffer
+
     const bufferStream = new Readable();
     bufferStream.push(req.file.buffer);
     bufferStream.push(null);
-    
-    // Process the CSV file
+
     await new Promise((resolve, reject) => {
       bufferStream
         .pipe(csv())
@@ -597,54 +328,98 @@ export const importDonorsCsv = async (req, res) => {
         .on('error', (error) => reject(error))
         .on('end', () => resolve());
     });
-    
-    // Validate and import each donor
+
+    const parseDate = (value) => {
+      const date = new Date(value);
+      return isNaN(date.getTime()) ? null : date;
+    };
+
+    const normalizeCity = (cityName) => cityName?.replaceAll(' ', '_');
+    const normalizeEnum = (value) => value?.trim()?.replace(/\s+/g, '_').replace(/-/g, '_') || null;
+
     const importedDonors = [];
+    let createdCount = 0;
+    let updatedCount = 0;
+
     for (const row of results) {
       try {
-        const donorData = validateDonorData(row);
-        
-        // Check if donor with this email already exists
-        if (donorData.email) {
-          const existingDonor = await prisma.donor.findUnique({
-            where: { email: donorData.email }
+        const donorData = {
+          first_name: row.first_name,
+          nick_name: row.nick_name || null,
+          last_name: row.last_name,
+          organization_name: row.organization_name || null,
+          unit_number: row.address_line2 || null,
+          street_address: row.address_line1,
+          city: normalizeCity(row.city),
+          total_donation_amount: parseFloat(row.total_donation_amount) || 0,
+          total_pledge: row.total_pledge ? parseFloat(row.total_pledge) : null,
+          largest_gift_amount: row.largest_gift_amount ? parseFloat(row.largest_gift_amount) : null,
+          largest_gift_appeal: row.largest_gift_appeal || null,
+          last_gift_amount: row.last_gift_amount ? parseFloat(row.last_gift_amount) : null,
+          last_gift_request: row.last_gift_request || null,
+          last_gift_appeal: row.last_gift_appeal || null,
+          first_gift_date: parseDate(row.first_gift_date),
+          last_gift_date: parseDate(row.last_gift_date),
+          pmm: row.pmm,
+          exclude: row.exclude === 'true',
+          deceased: row.deceased === 'true',
+          contact_phone_type: normalizeEnum(row.contact_phone_type),
+          phone_restrictions: row.phone_restrictions || null,
+          email_restrictions: row.email_restrictions || null,
+          communication_restrictions: row.communication_restrictions || null,
+          subscription_events_in_person: normalizeEnum(row.subscription_events_in_person),
+          subscription_events_magazine: normalizeEnum(row.subscription_events_magazine),
+          communication_preference: normalizeEnum(row.communication_preference)
+        };
+
+        const existingDonor = await prisma.donor.findFirst({
+          where: {
+            first_name: donorData.first_name,
+            last_name: donorData.last_name,
+            organization_name: donorData.organization_name,
+            street_address: donorData.street_address
+          }
+        });
+
+        if (existingDonor) {
+          const isDifferent = Object.entries(donorData).some(([key, value]) => {
+            const existingValue = existingDonor[key];
+
+            // Handle Date comparisons
+            if (value instanceof Date && existingValue instanceof Date) {
+              return value.getTime() !== existingValue.getTime();
+            }
+
+            return value !== existingValue;
           });
-          
-          if (existingDonor) {
-            // Update existing donor
+
+          if (isDifferent) {
             const updatedDonor = await prisma.donor.update({
-              where: { email: donorData.email },
+              where: { id: existingDonor.id },
               data: donorData
             });
             importedDonors.push(updatedDonor);
-          } else {
-            // Create new donor
-            const newDonor = await prisma.donor.create({
-              data: donorData
-            });
-            importedDonors.push(newDonor);
+            updatedCount++;
           }
         } else {
-          // Create donor without email
-          const newDonor = await prisma.donor.create({
-            data: donorData
-          });
+          const newDonor = await prisma.donor.create({ data: donorData });
           importedDonors.push(newDonor);
+          createdCount++;
         }
       } catch (error) {
         errors.push(`Row ${results.indexOf(row) + 1}: ${error.message}`);
       }
     }
-    
+
     res.status(200).json({
       message: 'Donors imported successfully',
-      importedCount: importedDonors.length,
-      totalRows: results.length,
+      createdCount,
+      updatedCount,
       errors: errors.length > 0 ? errors : undefined
     });
   } catch (error) {
     console.error('Error importing donors from CSV:', error);
-    res.status(500).json({ message: 'Error importing donors', error: error.message });
+    next(error);
   }
 };
 
