@@ -199,17 +199,22 @@ export default function CreateDonor() {
         tagIds,
       };
 
-      await axios.post("/api/donor", processedData, {
+      console.log('Sending data to server:', processedData);
+
+      const response = await axios.post("/api/donor", processedData, {
         headers: { "Content-Type": "application/json" },
         withCredentials: true,
       });
 
-      toast({
-        title: "Success",
-        description: "Donor created successfully!",
-      });å
+      console.log('Server response:', response.data);
 
-      setTimeout(() => navigate("/donors"), 1500);
+      if (response.data.success) {
+        toast({
+          title: "Success",
+          description: "Donor created successfully!"
+        });
+        navigate("/donors");
+      }
     } catch (err) {
       console.error("Error creating donor:", err);
       const serverMessage = err?.response?.data?.message;

@@ -14,6 +14,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
+import axios from "axios";
 
 export default function CreateEvent() {
   const navigate = useNavigate();
@@ -139,43 +140,24 @@ export default function CreateEvent() {
   };
 
   const recommendDonors = async () => {
-    setIsRecommending(true);
-    setError("");
-    
     try {
-      const selectedTagIds = formData.tags.map(tag => tag.value);
-      
-      const response = await fetch("/api/donor/recommend", {
-        method: "POST",
+      console.log('Calling recommend endpoint');
+      const response = await axios.get('/api/donor/recommend', {
+        withCredentials: true,
         headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          tagIds: selectedTagIds,
-          count: targetDonorCount
-        }),
+          'Content-Type': 'application/json'
+        }
       });
-      
-      if (!response.ok) {
-        throw new Error("Failed to get recommendations");
+
+      console.log('API Response:', response); // 添加日志
+
+      if (response.data.success) {
+        return response.data.recommendations;
       }
-      
-      const data = await response.json();
-      setFormData(prev => ({ 
-        ...prev, 
-        donors: data.donors,
-        donor_count: data.donors.length
-      }));
-      
-      toast({
-        title: "Success",
-        description: `${data.donors.length} donors recommended based on your criteria.`,
-      });
-    } catch (err) {
-      console.error("Error getting recommendations:", err);
-      setError("Failed to get donor recommendations. Please try again.");
-    } finally {
-      setIsRecommending(false);
+      throw new Error('Failed to get recommendations');
+    } catch (error) {
+      console.error('Error fetching recommendations:', error);
+      throw new Error('Failed to get recommendations');
     }
   };
 
