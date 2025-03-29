@@ -38,6 +38,8 @@ export default function CreateEvent() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filteredDonors, setFilteredDonors] = useState([]);
   const [isRecommending, setIsRecommending] = useState(false);
+  const [recommendedDonors, setRecommendedDonors] = useState([]);
+
 
   // 获取所有标签
   useEffect(() => {
@@ -140,26 +142,46 @@ export default function CreateEvent() {
   };
 
   const recommendDonors = async () => {
+    setIsRecommending(true);
     try {
-      console.log('Calling recommend endpoint');
       const response = await axios.get('/api/donor/recommend', {
         withCredentials: true,
         headers: {
           'Content-Type': 'application/json'
         }
       });
-
-      console.log('API Response:', response); // 添加日志
-
+  
       if (response.data.success) {
-        return response.data.recommendations;
+        const formattedDonors = response.data.recommendations.map(donor => ({
+          value: donor.id,
+          label: donor.organization_name || `${donor.first_name} ${donor.last_name}`,
+          city: donor.city,
+          tags: donor.tags?.map(t => t.tag) || [],
+          totalDonation: donor.total_donation_amount || 0,
+        }));
+  
+        setRecommendedDonors(formattedDonors);
+  
+        // 自动将推荐捐赠者添加到已选择列表（避免重复）
+        setFormData(prev => ({
+          ...prev,
+          donors: [
+            ...prev.donors,
+            ...formattedDonors.filter(newDonor => !prev.donors.some(d => d.value === newDonor.value))
+          ],
+          donor_count: prev.donors.length + formattedDonors.filter(newDonor => !prev.donors.some(d => d.value === newDonor.value)).length
+        }));
+      } else {
+        throw new Error('Failed to get recommendations');
       }
-      throw new Error('Failed to get recommendations');
     } catch (error) {
       console.error('Error fetching recommendations:', error);
-      throw new Error('Failed to get recommendations');
+      setError('Unable to fetch recommendations');
+    } finally {
+      setIsRecommending(false);
     }
   };
+  
 
   const addDonor = (donor) => {
     if (!formData.donors.some(d => d.value === donor.value)) {
