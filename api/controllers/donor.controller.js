@@ -23,7 +23,7 @@ export const createDonor = async (req, res, next) => {
       unit_number,
       street_address,
       city,
-      total_donations,
+      total_donation_amount,
       total_pledge,
       largest_gift_amount,
       largest_gift_appeal,
