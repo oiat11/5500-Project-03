@@ -94,8 +94,7 @@ export default function Donors() {
       
       // Handle tags filter with MultiSelect format
       if (filters.tags && filters.tags.length > 0) {
-        // 确保标签作为数组发送，而不是逗号分隔的字符串，
-        // 这样后端的 `in` 操作符才能正确应用OR逻辑
+        // use an array to send tags
         params.tags = Array.isArray(filters.tags[0]) ? 
           filters.tags : 
           filters.tags.map(tag => typeof tag === 'object' ? tag.value : tag);
