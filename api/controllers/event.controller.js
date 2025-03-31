@@ -95,11 +95,27 @@ export const getEventById = async (req, res, next) => {
 
     // check whether the event is created by the current user
     const isEventOwner = event.created_by === String(req.user.id);
+    
+    // 获取创建者的用户信息
+    let creatorInfo = null;
+    try {
+      if (event.created_by) {
+        creatorInfo = await prisma.user.findUnique({
+          where: { id: parseInt(event.created_by) },
+          select: { username: true }
+        });
+      }
+    } catch (err) {
+      console.error("Error fetching creator info:", err);
+    }
 
     res.status(200).json({
       success: true,
       message: 'Event fetched successfully',
-      event,
+      event: {
+        ...event,
+        creator: creatorInfo
+      },
       isEventOwner
     });
   } catch (err) {

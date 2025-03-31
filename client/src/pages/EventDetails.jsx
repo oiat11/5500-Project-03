@@ -254,7 +254,7 @@ export default function EventDetails() {
             {isEventOwner && (
               <>
                 <Button
-                  variant="outline"
+                  variant="default"
                   onClick={() => navigate(`/events/${id}/edit`)}
                   className="flex items-center gap-1"
                 >
@@ -273,6 +273,9 @@ export default function EventDetails() {
             )}
           </div>
         </div>
+
+        {/* 添加事件名称标题 */}
+        <h1 className="text-3xl font-bold mb-6">{event.name}</h1>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {/* Event Details */}
@@ -434,6 +437,10 @@ export default function EventDetails() {
                 </div>
                 <Separator />
                 <div className="flex justify-between items-center">
+                  <span className="text-gray-500">Created By</span>
+                  <span>{event.creator?.username || `User #${event.created_by}`}</span>
+                </div>
+                <div className="flex justify-between items-center">
                   <span className="text-gray-500">Created</span>
                   <span>
                     {format(new Date(event.created_at), "MMM d, yyyy")}
@@ -444,17 +451,6 @@ export default function EventDetails() {
                   <span>
                     {format(new Date(event.updated_at), "MMM d, yyyy")}
                   </span>
-                </div>
-                <Separator />
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-500">Donor Count</span>
-                  <span className="font-medium">
-                    {event.donors?.length || 0}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-500">Target Count</span>
-                  <span className="font-medium">{event.donor_count || 0}</span>
                 </div>
               </CardContent>
             </Card>
