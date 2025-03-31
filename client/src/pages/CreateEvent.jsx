@@ -14,6 +14,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
+import axios from "axios";
 
 export default function CreateEvent() {
   const navigate = useNavigate();
@@ -37,6 +38,8 @@ export default function CreateEvent() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filteredDonors, setFilteredDonors] = useState([]);
   const [isRecommending, setIsRecommending] = useState(false);
+  const [recommendedDonors, setRecommendedDonors] = useState([]);
+
 
   // 获取所有标签
   useEffect(() => {
@@ -140,44 +143,45 @@ export default function CreateEvent() {
 
   const recommendDonors = async () => {
     setIsRecommending(true);
-    setError("");
-    
     try {
-      const selectedTagIds = formData.tags.map(tag => tag.value);
-      
-      const response = await fetch("/api/donor/recommend", {
-        method: "POST",
+      const response = await axios.get('/api/donor/recommend', {
+        withCredentials: true,
         headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          tagIds: selectedTagIds,
-          count: targetDonorCount
-        }),
+          'Content-Type': 'application/json'
+        }
       });
-      
-      if (!response.ok) {
-        throw new Error("Failed to get recommendations");
+  
+      if (response.data.success) {
+        const formattedDonors = response.data.recommendations.map(donor => ({
+          value: donor.id,
+          label: donor.organization_name || `${donor.first_name} ${donor.last_name}`,
+          city: donor.city,
+          tags: donor.tags?.map(t => t.tag) || [],
+          totalDonation: donor.total_donation_amount || 0,
+        }));
+  
+        setRecommendedDonors(formattedDonors);
+  
+        // 自动将推荐捐赠者添加到已选择列表（避免重复）
+        setFormData(prev => ({
+          ...prev,
+          donors: [
+            ...prev.donors,
+            ...formattedDonors.filter(newDonor => !prev.donors.some(d => d.value === newDonor.value))
+          ],
+          donor_count: prev.donors.length + formattedDonors.filter(newDonor => !prev.donors.some(d => d.value === newDonor.value)).length
+        }));
+      } else {
+        throw new Error('Failed to get recommendations');
       }
-      
-      const data = await response.json();
-      setFormData(prev => ({ 
-        ...prev, 
-        donors: data.donors,
-        donor_count: data.donors.length
-      }));
-      
-      toast({
-        title: "Success",
-        description: `${data.donors.length} donors recommended based on your criteria.`,
-      });
-    } catch (err) {
-      console.error("Error getting recommendations:", err);
-      setError("Failed to get donor recommendations. Please try again.");
+    } catch (error) {
+      console.error('Error fetching recommendations:', error);
+      setError('Unable to fetch recommendations');
     } finally {
       setIsRecommending(false);
     }
   };
+  
 
   const addDonor = (donor) => {
     if (!formData.donors.some(d => d.value === donor.value)) {

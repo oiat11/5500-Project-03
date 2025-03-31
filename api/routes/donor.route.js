@@ -1,6 +1,6 @@
 import express from 'express';
 import multer from 'multer';
-import { createDonor, getDonors, getAllDonors, getDonorById, updateDonor, deleteDonor, importDonorsCsv, recommendDonors } from '../controllers/donor.controller.js';
+import { createDonor, getDonors, getAllDonors, getDonorById, updateDonor, deleteDonor, importDonorsCsv, getAvailableCities, recommendDonors } from '../controllers/donor.controller.js';
 import { verifyToken } from '../utils/verifyUser.js';
 
 const router = express.Router();
@@ -19,17 +19,15 @@ const upload = multer({
   }
 });
 
-// Create donor
-router.post('/', verifyToken, createDonor);
-
-// Get all donors with search and pagination
+// Get all donors
 router.get('/', verifyToken, getDonors);
 
-// Get all donors without any filters
+// Get all donors (without pagination)
 router.get('/all', verifyToken, getAllDonors);
 
-// Get donor by ID
-router.get('/:id', verifyToken, getDonorById);
+// Get available cities
+router.get('/cities', verifyToken, getAvailableCities);
+
 
 // Update donor
 router.put('/:id', verifyToken, updateDonor);
@@ -41,6 +39,12 @@ router.delete('/:id', verifyToken, deleteDonor);
 router.post('/import/csv', verifyToken, upload.single('file'), importDonorsCsv);
 
 // Recommend donors
-router.post('/recommend', verifyToken, recommendDonors);
+router.get('/recommend', recommendDonors);
+
+// Get single donor
+router.get('/:id', verifyToken, getDonorById);
+
+// Create donor
+router.post('/', verifyToken, createDonor);
 
 export default router;
