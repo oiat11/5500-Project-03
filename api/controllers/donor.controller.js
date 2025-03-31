@@ -521,7 +521,7 @@ export const recommendDonors = async (req, res, next) => {
     
     const scoredDonors = donorsWithTags.map(donor => {
       const matchingTagCount = donor.tags.filter(t => 
-        tagIds.includes(t.tagId)
+        tagIds.includes(t.tag_id)
       ).length;
       
       return {

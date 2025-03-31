@@ -36,6 +36,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import DonorSelection from "@/components/DonorSelection";
 
 export default function EventDetails() {
   const { id } = useParams();
@@ -46,6 +47,14 @@ export default function EventDetails() {
   const [error, setError] = useState("");
   const [deleteDialog, setDeleteDialog] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [isEventOwner, setIsEventOwner] = useState(false);
+  
+  // 添加这些状态用于 DonorSelection 组件
+  const [formData, setFormData] = useState({
+    donors: [],
+    tags: []
+  });
+  const [tags, setTags] = useState([]);
 
   useEffect(() => {
     const fetchEventDetails = async () => {
@@ -64,6 +73,25 @@ export default function EventDetails() {
 
         const data = await response.json();
         setEvent(data.event);
+        setIsEventOwner(data.isEventOwner);
+        
+        // 设置 formData 以便 DonorSelection 组件使用
+        setFormData({
+          donors: data.event.donors.map(donorEvent => ({
+            value: donorEvent.donor_id,
+            label: donorEvent.donor.organization_name || 
+                  `${donorEvent.donor.first_name} ${donorEvent.donor.last_name}`,
+            tags: donorEvent.donor.tags?.map(t => t.tag) || [],
+            totalDonation: donorEvent.donor.total_donation_amount || 0,
+            city: donorEvent.donor.city,
+            status: donorEvent.status
+          })),
+          tags: data.event.tags.map(tag => ({
+            value: tag.id,
+            label: tag.name,
+            color: tag.color
+          }))
+        });
       } catch (err) {
         console.error("Error fetching event details:", err);
         setError("Failed to load event details. Please try again.");
@@ -209,35 +237,40 @@ export default function EventDetails() {
     <div className="container max-w-7xl mx-auto py-8 px-4">
       <div className="flex flex-col gap-8">
         {/* Header */}
-        <div className="flex justify-between items-start">
+        <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
               size="sm"
               onClick={() => navigate("/events")}
-            >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back
-            </Button>
-            <h1 className="text-3xl font-bold">{event.name}</h1>
-            {getStatusBadge(event.status)}
-          </div>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={() => navigate(`/events/${id}/edit`)}
               className="flex items-center gap-1"
             >
-              <Edit className="h-4 w-4" />
-              Edit Event
+              <ArrowLeft className="h-4 w-4" />
+              Back to Events
             </Button>
-            <Button
-              variant="destructive"
-              onClick={() => setDeleteDialog(true)}
-            >
-              <Trash2 className="h-4 w-4 mr-2" />
-              Delete
-            </Button>
+          </div>
+          <div className="flex items-center gap-2">
+            {/* Only show edit and delete buttons if the user is the event owner */}
+            {isEventOwner && (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => navigate(`/events/${id}/edit`)}
+                  className="flex items-center gap-1"
+                >
+                  <Edit className="h-4 w-4" />
+                  Edit Event
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => setDeleteDialog(true)}
+                  className="flex items-center gap-1"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Delete
+                </Button>
+              </>
+            )}
           </div>
         </div>
 

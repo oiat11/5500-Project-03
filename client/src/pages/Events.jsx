@@ -34,6 +34,10 @@ export default function Events() {
     fetchEvents();
   }, []);
 
+  const handleEventClick = (eventId) => {
+    navigate(`/events/${eventId}`);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -59,14 +63,18 @@ export default function Events() {
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {events.map((event) => (
-            <Card key={event.id} className="overflow-hidden hover:shadow-md transition-shadow">
+            <Card 
+              key={event.id} 
+              className="overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
+              onClick={() => handleEventClick(event.id)}
+            >
               <CardHeader className="p-4 pb-2">
                 <CardTitle className="text-xl">{event.name}</CardTitle>
               </CardHeader>
               <CardContent className="p-4 pt-0 space-y-3">
                 <div className="flex items-center text-sm text-muted-foreground">
                   <CalendarIcon className="mr-2 h-4 w-4" />
-                  {format(new Date(event.date), 'PPP')}
+                  {event.date ? format(new Date(event.date), 'PPP') : 'No date set'}
                 </div>
                 
                 {event.location && (
@@ -86,7 +94,16 @@ export default function Events() {
                       <TagIcon className="h-4 w-4 mt-0.5" />
                       <div className="flex flex-wrap gap-1">
                         {event.tags.map(tag => (
-                          <Badge key={tag.id} variant="outline" className="text-xs">
+                          <Badge 
+                            key={tag.id} 
+                            variant="outline" 
+                            className="text-xs"
+                            style={{ 
+                              backgroundColor: tag.color ? `${tag.color}20` : undefined,
+                              borderColor: tag.color,
+                              color: tag.color
+                            }}
+                          >
                             {tag.name}
                           </Badge>
                         ))}
@@ -100,6 +117,18 @@ export default function Events() {
                     <UsersIcon className="mr-1 h-4 w-4" />
                     {event.donors?.length || 0} donors
                   </div>
+                  {event.status && (
+                    <Badge 
+                      variant="outline" 
+                      className={`
+                        ${event.status === 'draft' ? 'bg-gray-100 text-gray-800' : ''}
+                        ${event.status === 'published' ? 'bg-green-100 text-green-800' : ''}
+                        ${event.status === 'archived' ? 'bg-amber-100 text-amber-800' : ''}
+                      `}
+                    >
+                      {event.status.charAt(0).toUpperCase() + event.status.slice(1)}
+                    </Badge>
+                  )}
                 </div>
               </CardContent>
             </Card>

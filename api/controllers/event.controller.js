@@ -15,6 +15,7 @@ export const createEventWithDonors = async (req, res, next) => {
         date: new Date(date),
         location,
         status,
+        created_by: String(req.user.id),
         tags: {
           connect: tagIds.map((id) => ({ id })),
         },
@@ -78,19 +79,28 @@ export const getEventById = async (req, res, next) => {
       include: {
         tags: true,
         donors: {
-          include: { donor: true },
-        },
-      },
+          include: {
+            donor: true
+          }
+        }
+      }
     });
 
-    if (!event || event.is_deleted) {
-      return next(errorHandler(404, 'Event not found'));
+    if (!event) {
+      return res.status(404).json({
+        success: false,
+        message: 'Event not found'
+      });
     }
+
+    // check whether the event is created by the current user
+    const isEventOwner = event.created_by === String(req.user.id);
 
     res.status(200).json({
       success: true,
       message: 'Event fetched successfully',
       event,
+      isEventOwner
     });
   } catch (err) {
     next(err);
@@ -100,9 +110,24 @@ export const getEventById = async (req, res, next) => {
 // Update Event
 export const updateEvent = async (req, res, next) => {
   const { id } = req.params;
-  const { name, description, date, location, tagIds = [] } = req.body;
+  const { 
+    name, 
+    description, 
+    date, 
+    location, 
+    tagIds = [], 
+    donors = [],
+    status,
+    donor_count
+  } = req.body;
 
   try {
+
+    await prisma.donorEvent.deleteMany({
+      where: { event_id: id }
+    });
+
+  
     const event = await prisma.event.update({
       where: { id },
       data: {
@@ -110,8 +135,16 @@ export const updateEvent = async (req, res, next) => {
         description,
         date: date ? new Date(date) : undefined,
         location,
+        status,
+        donor_count,
         tags: {
-          set: tagIds.map((id) => ({ id })),
+          set: tagIds.map((tagId) => ({ id: tagId })),
+        },
+        donors: {
+          create: donors.map((d) => ({
+            donor: { connect: { id: d.donorId } },
+            status: d.status || "invited",
+          })),
         },
       },
       include: {
