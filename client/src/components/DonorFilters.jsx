@@ -141,7 +141,7 @@ const DonorFilters = ({ onFilterChange, availableFilters = {} }) => {
       ...filters,
       // Convert arrays to comma-separated strings for the API
       cities: filters.cities.length > 0 ? filters.cities.join(',') : undefined,
-      // 将标签作为数组发送，而不是逗号分隔的字符串，以实现OR过滤逻辑
+
       tags: filters.tags.length > 0 ? filters.tags.map(tag => typeof tag === 'object' ? tag.value : tag) : undefined,
       // Only include non-empty values
       largestGiftAppeal: filters.largestGiftAppeal || undefined,
