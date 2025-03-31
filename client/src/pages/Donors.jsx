@@ -279,6 +279,12 @@ export default function Donors() {
     };
   }, []);
 
+  const handleDonorClick = (donor) => {
+    // 将整个 donor 对象存储在 localStorage 中
+    localStorage.setItem('selectedDonor', JSON.stringify(donor));
+    navigate(`/donors/${donor.id}`);
+  };
+
   return (
     <div className="w-full max-w-[1200px] mx-auto px-4">
       <div className="flex items-center justify-between w-full mb-6">
@@ -423,13 +429,7 @@ export default function Donors() {
                     <TableRow
                       key={donor.id}
                       className="cursor-pointer hover:bg-slate-50"
-                      onClick={(e) => {
-                        if (
-                          e.target.type !== "checkbox" &&
-                          !e.target.closest(".checkbox-wrapper")
-                        )
-                          navigate(`/donors/${donor.id}`);
-                      }}
+                      onClick={() => handleDonorClick(donor)}
                     >
                       <TableCell className="checkbox-wrapper">
                         <Checkbox
