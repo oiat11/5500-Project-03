@@ -295,38 +295,92 @@ export const getDonorById = async (req, res, next) => {
 
 export const updateDonor = async (req, res, next) => {
   try {
-    if (!req.user) {
-      return res.status(401).json({ message: 'Unauthorized: Please log in' });
-    }
-
     const { id } = req.params;
-    const updateData = req.body;
+    console.log('Updating donor with ID:', id);
+    console.log('Update data received:', req.body);
 
-    // Process numeric values
-    const processedData = {
-      ...updateData,
-      total_donation_amount: updateData.total_donation_amount ? parseFloat(updateData.total_donation_amount) : 0,
-      total_pledge: updateData.total_pledge ? parseFloat(updateData.total_pledge) : null,
-      largest_gift_amount: updateData.largest_gift_amount ? parseFloat(updateData.largest_gift_amount) : null,
-      last_gift_amount: updateData.last_gift_amount ? parseFloat(updateData.last_gift_amount) : null,
-      first_gift_date: updateData.first_gift_date ? new Date(updateData.first_gift_date).toISOString() : null,
+    // 提取标签 ID
+    const { tagIds, ...donorData } = req.body;
+
+    // 处理数值字段
+    const updateData = {
+      ...donorData,
+      total_donation_amount: donorData.total_donation_amount 
+        ? new Decimal(donorData.total_donation_amount) 
+        : new Decimal(0),
+      total_pledge: donorData.total_pledge 
+        ? new Decimal(donorData.total_pledge) 
+        : null,
+      largest_gift_amount: donorData.largest_gift_amount 
+        ? new Decimal(donorData.largest_gift_amount) 
+        : null,
+      last_gift_amount: donorData.last_gift_amount 
+        ? new Decimal(donorData.last_gift_amount) 
+        : null,
     };
 
-    const updatedDonor = await prisma.donor.update({
-      where: { id },
-      data: processedData,
-      include: {
-        tags: {
-          include: {
-            tag: true
-          }
+    // 移除不需要更新的字段
+    delete updateData.id;
+    delete updateData.created_at;
+    delete updateData.updated_at;
+    delete updateData.tags;
+    delete updateData.events;
+
+    console.log('Processed update data:', updateData);
+
+    // 开始事务处理
+    const updatedDonor = await prisma.$transaction(async (tx) => {
+      // 1. 更新捐赠者基本信息
+      const donor = await tx.donor.update({
+        where: { id },
+        data: updateData,
+      });
+
+      // 2. 如果提供了标签 ID，更新标签关联
+      if (tagIds && Array.isArray(tagIds)) {
+        // 删除现有标签关联
+        await tx.donorTag.deleteMany({
+          where: { donor_id: id }
+        });
+
+        // 创建新的标签关联
+        for (const tagId of tagIds) {
+          await tx.donorTag.create({
+            data: {
+              donor_id: id,
+              tag_id: tagId
+            }
+          });
         }
       }
+
+      // 返回更新后的捐赠者数据，包括标签
+      return tx.donor.findUnique({
+        where: { id },
+        include: {
+          tags: {
+            include: {
+              tag: true
+            }
+          }
+        }
+      });
     });
 
-    res.status(200).json(updatedDonor);
+    console.log('Donor updated successfully');
+
+    return res.status(200).json({
+      success: true,
+      message: 'Donor updated successfully',
+      donor: updatedDonor
+    });
   } catch (error) {
-    next(error);
+    console.error('Error updating donor:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to update donor',
+      error: error.message
+    });
   }
 };
 
