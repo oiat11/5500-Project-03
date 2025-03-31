@@ -86,19 +86,18 @@ export default function Donors() {
       if (filters.communicationRestrictions)
         params.communicationRestrictions = filters.communicationRestrictions;
       
-      // Handle company type filter if isCompany is still set
-      if (filters.isCompany !== undefined) {
-        params.isCompany = filters.isCompany;
-      }
 
       // Handle array parameters
       if (filters.cities && filters.cities.length > 0) {
         params.city = filters.cities;
       }
       
-      // Handle tags filter
+      // Handle tags filter with MultiSelect format
       if (filters.tags && filters.tags.length > 0) {
-        params.tags = filters.tags;
+        // use an array to send tags
+        params.tags = Array.isArray(filters.tags[0]) ? 
+          filters.tags : 
+          filters.tags.map(tag => typeof tag === 'object' ? tag.value : tag);
       }
 
       const response = await axios.get(`/api/donor`, { params });
