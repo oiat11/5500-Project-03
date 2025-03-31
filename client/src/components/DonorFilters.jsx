@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { MultiSelect } from '@/components/ui/multi-select';
 import axios from 'axios';
 import { ChevronUp, ChevronDown } from 'lucide-react';
 import { Label } from '@/components/ui/label';
@@ -17,11 +18,12 @@ const DonorFilters = ({ onFilterChange, availableFilters = {} }) => {
     phoneRestrictions: '',
     emailRestrictions: '',
     communicationRestrictions: '',
-    isCompany: undefined,
     tags: [],
     tagSearch: ''
   });
   const [availableCities, setAvailableCities] = useState([]);
+  const [tagOptions, setTagOptions] = useState([]);
+  const [loadingTags, setLoadingTags] = useState(false);
 
   useEffect(() => {
     const fetchCities = async () => {
@@ -39,6 +41,45 @@ const DonorFilters = ({ onFilterChange, availableFilters = {} }) => {
 
     fetchCities();
   }, []);
+
+  // Fetch tags directly from the tag API endpoint
+  useEffect(() => {
+    const fetchTags = async () => {
+      try {
+        setLoadingTags(true);
+        const response = await axios.get('/api/tag', {
+          withCredentials: true
+        });
+        
+        if (response.data && response.data.tags) {
+          // Format tags for MultiSelect component
+          const formattedTags = response.data.tags.map(tag => ({
+            value: tag.name,  // Using tag name as value for filtering
+            label: tag.name,
+            color: tag.color || '#6366f1'  // Use tag color or default
+          }));
+          setTagOptions(formattedTags);
+        }
+      } catch (err) {
+        console.error("Error fetching tags:", err);
+      } finally {
+        setLoadingTags(false);
+      }
+    };
+
+    fetchTags();
+  }, []);
+
+  // Also use available filters if they exist (as a backup)
+  useEffect(() => {
+    if (availableFilters.tags?.length > 0 && tagOptions.length === 0) {
+      setTagOptions(availableFilters.tags.map(tag => ({
+        value: tag,
+        label: tag,
+        color: '#6366f1' // Default color if not provided
+      })));
+    }
+  }, [availableFilters.tags, tagOptions.length]);
 
   // Handler to clear a specific filter
   const handleClearFilter = (filterName) => {
@@ -85,22 +126,11 @@ const DonorFilters = ({ onFilterChange, availableFilters = {} }) => {
     setFilters(prev => ({ ...prev, contactPhoneType: type }));
   };
 
-  // Handler for tag selection
-  const handleTagSelect = (e) => {
-    const selectedTag = e.target.value;
-    if (selectedTag && !filters.tags.includes(selectedTag)) {
-      setFilters(prev => ({
-        ...prev,
-        tags: [...prev.tags, selectedTag]
-      }));
-    }
-  };
-
-  // Handler for tag removal
-  const handleRemoveTag = (tag) => {
+  // Handler for tag selection with MultiSelect
+  const handleTagsChange = (selectedTags) => {
     setFilters(prev => ({
       ...prev,
-      tags: prev.tags.filter(t => t !== tag)
+      tags: selectedTags
     }));
   };
 
@@ -111,7 +141,8 @@ const DonorFilters = ({ onFilterChange, availableFilters = {} }) => {
       ...filters,
       // Convert arrays to comma-separated strings for the API
       cities: filters.cities.length > 0 ? filters.cities.join(',') : undefined,
-      tags: filters.tags.length > 0 ? filters.tags.join(',') : undefined,
+      // 将标签作为数组发送，而不是逗号分隔的字符串，以实现OR过滤逻辑
+      tags: filters.tags.length > 0 ? filters.tags.map(tag => typeof tag === 'object' ? tag.value : tag) : undefined,
       // Only include non-empty values
       largestGiftAppeal: filters.largestGiftAppeal || undefined,
       contactPhoneType: filters.contactPhoneType || undefined,
@@ -382,21 +413,21 @@ const DonorFilters = ({ onFilterChange, availableFilters = {} }) => {
                 </div>
               </div>
 
-              {/* Donor Tags Filter */}
+              {/* Donor Tags Filter - Using MultiSelect */}
               <div>
                 <Label htmlFor="tags" className="mb-1">Donor Tags</Label>
                 <div className="flex flex-col gap-2">
                   <div className="flex gap-2">
-                    <select
-                      id="tags"
-                      onChange={handleTagSelect}
-                      className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      <option value="">Select a tag...</option>
-                      {availableFilters.tags?.map(tag => (
-                        <option key={tag} value={tag}>{tag}</option>
-                      ))}
-                    </select>
+                    <div className="w-full">
+                      <MultiSelect
+                        id="tags"
+                        isLoading={loadingTags}
+                        options={tagOptions}
+                        value={filters.tags}
+                        onChange={handleTagsChange}
+                        placeholder="Select tags..."
+                      />
+                    </div>
                     <Button
                       size="sm"
                       variant="outline"
@@ -405,27 +436,6 @@ const DonorFilters = ({ onFilterChange, availableFilters = {} }) => {
                       Clear
                     </Button>
                   </div>
-                  
-                  {/* Display selected tags */}
-                  {filters.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      {filters.tags.map(tag => (
-                        <span 
-                          key={tag} 
-                          className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
-                        >
-                          {tag}
-                          <button 
-                            type="button"
-                            className="ml-1 text-blue-500 hover:text-blue-800 focus:outline-none"
-                            onClick={() => handleRemoveTag(tag)}
-                          >
-                            ×
-                          </button>
-                        </span>
-                      ))}
-                    </div>
-                  )}
                 </div>
               </div>
 

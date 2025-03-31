@@ -86,19 +86,19 @@ export default function Donors() {
       if (filters.communicationRestrictions)
         params.communicationRestrictions = filters.communicationRestrictions;
       
-      // Handle company type filter if isCompany is still set
-      if (filters.isCompany !== undefined) {
-        params.isCompany = filters.isCompany;
-      }
 
       // Handle array parameters
       if (filters.cities && filters.cities.length > 0) {
         params.city = filters.cities;
       }
       
-      // Handle tags filter
+      // Handle tags filter with MultiSelect format
       if (filters.tags && filters.tags.length > 0) {
-        params.tags = filters.tags;
+        // 确保标签作为数组发送，而不是逗号分隔的字符串，
+        // 这样后端的 `in` 操作符才能正确应用OR逻辑
+        params.tags = Array.isArray(filters.tags[0]) ? 
+          filters.tags : 
+          filters.tags.map(tag => typeof tag === 'object' ? tag.value : tag);
       }
 
       const response = await axios.get(`/api/donor`, { params });
