@@ -187,6 +187,14 @@ export default function UpdateEvent() {
     }
   };
 
+  // Add clear all donors function
+  const handleClearAllDonors = () => {
+    setFormData(prev => ({
+      ...prev,
+      donors: []
+    }));
+  };
+
   if (loading) {
     return (
       <div className="container max-w-7xl mx-auto py-8 px-4">
@@ -342,6 +350,7 @@ export default function UpdateEvent() {
                   donors={formData.donors} 
                   onStatusChange={handleDonorStatusChange} 
                   onRemove={handleRemoveDonor} 
+                  onClearAll={handleClearAllDonors}
                 />
               </CardContent>
             </Card>

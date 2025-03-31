@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { useToast } from "@/components/ui/toast";
 import { MultiSelect } from "@/components/ui/multi-select";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Users } from "lucide-react";
+import { Users, Trash2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import CurrentDonorsList from "@/components/CurrentDonorsList";
 import DonorSelection from "@/components/DonorSelection";
@@ -144,6 +144,13 @@ export default function CreateEvent() {
     }));
   };
 
+  const handleClearAllDonors = () => {
+    setFormData(prev => ({
+      ...prev,
+      donors: []
+    }));
+  };
+
   return (
     <div className="container mx-auto py-6">
       <h1 className="text-2xl font-bold mb-6">Create New Event</h1>
@@ -223,21 +230,35 @@ export default function CreateEvent() {
           </Card>
           
           {/* Current Donors */}
-          <Card>
+          <Card className="h-full flex flex-col">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5" />
-                Selected Donors ({formData.donors.length})
-              </CardTitle>
+              <div className="flex justify-between items-center">
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5" />
+                  Selected Donors ({formData.donors.length})
+                </CardTitle>
+                {formData.donors.length > 0 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleClearAllDonors}
+                    className="flex items-center gap-1"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    Clear All
+                  </Button>
+                )}
+              </div>
               <CardDescription>
                 Donors to be invited to this event
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="flex-1">
               <CurrentDonorsList 
                 donors={formData.donors} 
                 onStatusChange={handleDonorStatusChange} 
-                onRemove={handleRemoveDonor} 
+                onRemove={handleRemoveDonor}
               />
             </CardContent>
           </Card>

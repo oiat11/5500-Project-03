@@ -92,7 +92,13 @@ export default function DonorSelection({ formData, setFormData, tags }) {
     }
   };
 
-  const handleToggleDonor = (donor) => {
+  const handleToggleDonor = (donor, e) => {
+    // 防止事件冒泡和表单提交
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    
     const isSelected = formData.donors.some(d => d.value === donor.value);
     
     if (isSelected) {
@@ -109,6 +115,33 @@ export default function DonorSelection({ formData, setFormData, tags }) {
         }]
       }));
     }
+  };
+
+  const handleAddAllDonors = (e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    
+    if (filteredDonors.length === 0) return;
+    
+    // 获取当前未选择的捐赠者
+    const existingDonorIds = formData.donors.map(d => d.value);
+    const newDonors = filteredDonors.filter(donor => !existingDonorIds.includes(donor.value));
+    
+    if (newDonors.length === 0) return;
+    
+    // 添加所有新捐赠者
+    setFormData(prev => ({
+      ...prev,
+      donors: [
+        ...prev.donors,
+        ...newDonors.map(donor => ({
+          ...donor,
+          status: "invited"
+        }))
+      ]
+    }));
   };
 
   return (
@@ -130,11 +163,20 @@ export default function DonorSelection({ formData, setFormData, tags }) {
               className="w-20"
             />
             <Button 
+              type="button"
               onClick={handleRecommendDonors}
               disabled={isRecommending}
               className="flex-1"
             >
               {isRecommending ? "Finding..." : "Recommend Donors"}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleAddAllDonors}
+              disabled={filteredDonors.length === 0}
+            >
+              Add All
             </Button>
           </div>
           <p className="text-sm text-muted-foreground">
@@ -162,6 +204,7 @@ export default function DonorSelection({ formData, setFormData, tags }) {
             </div>
             {searchQuery && (
               <Button 
+                type="button"
                 variant="ghost" 
                 size="icon"
                 onClick={() => setSearchQuery("")}
@@ -230,9 +273,10 @@ function DonorList({ donors, selectedDonors, onToggle, loading, emptyMessage }) 
                   )}
                 </div>
                 <Button
+                  type="button"
                   variant="ghost"
                   size="icon"
-                  onClick={() => onToggle(donor)}
+                  onClick={(e) => onToggle(donor, e)}
                 >
                   {isSelected ? <UserMinus className="h-4 w-4" /> : <UserPlus className="h-4 w-4" />}
                 </Button>
