@@ -24,6 +24,7 @@ const DonorFilters = ({ onFilterChange, availableFilters = {} }) => {
   const [availableCities, setAvailableCities] = useState([]);
   const [tagOptions, setTagOptions] = useState([]);
   const [loadingTags, setLoadingTags] = useState(false);
+  console.log("Filter Cities:", filters.cities);
 
   useEffect(() => {
     const fetchCities = async () => {
@@ -138,20 +139,17 @@ const DonorFilters = ({ onFilterChange, availableFilters = {} }) => {
   useEffect(() => {
     // Convert filters to query parameters
     const queryParams = {
-      ...filters,
-      // Convert arrays to comma-separated strings for the API
-      cities: filters.cities.length > 0 ? filters.cities.join(',') : undefined,
-
-      tags: filters.tags.length > 0 ? filters.tags.map(tag => typeof tag === 'object' ? tag.value : tag) : undefined,
-      // Only include non-empty values
+      city: filters.cities.length > 0 ? filters.cities.join(',') : undefined,
+      tags: filters.tags.length > 0
+        ? filters.tags.map(tag => typeof tag === 'object' ? tag.value : tag)
+        : undefined,
       largestGiftAppeal: filters.largestGiftAppeal || undefined,
       contactPhoneType: filters.contactPhoneType || undefined,
       phoneRestrictions: filters.phoneRestrictions || undefined,
       emailRestrictions: filters.emailRestrictions || undefined,
       communicationRestrictions: filters.communicationRestrictions || undefined,
-      // Only include donation amounts if they have values
       minDonationAmount: filters.minDonationAmount || undefined,
-      maxDonationAmount: filters.maxDonationAmount || undefined
+      maxDonationAmount: filters.maxDonationAmount || undefined,
     };
 
     // Remove undefined values

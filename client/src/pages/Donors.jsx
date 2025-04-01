@@ -70,7 +70,7 @@ export default function Donors() {
         includeFields: 'total_donations,largest_gift_appeal,city,contact_phone_type,phone_restrictions,email_restrictions,communication_restrictions'
       };
       
-      // Add other parameters for filtering...
+      // Add other parameters for filtering..
       if (filters.minDonationAmount)
         params.minDonationAmount = filters.minDonationAmount;
       if (filters.maxDonationAmount)
@@ -87,10 +87,10 @@ export default function Donors() {
         params.communicationRestrictions = filters.communicationRestrictions;
       
 
-      // Handle array parameters
-      if (filters.cities && filters.cities.length > 0) {
-        params.city = filters.cities;
+      if (filters.city) {
+        params.city = filters.city; // ✅ filters.city 是逗号分隔字符串
       }
+      
       
       // Handle tags filter with MultiSelect format
       if (filters.tags && filters.tags.length > 0) {

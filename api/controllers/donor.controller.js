@@ -9,10 +9,11 @@ const prisma = new PrismaClient();
 export const createDonor = async (req, res, next) => {
   try {
     if (!req.user) {
-      const err = new Error('Unauthorized: Please log in');
-      err.statusCode = 401;
-      err.isPublic = true;
-      return next(err);
+      return next({
+        statusCode: 401,
+        message: 'Unauthorized: Please log in',
+        isPublic: true
+      });
     }
 
     const {
@@ -32,8 +33,8 @@ export const createDonor = async (req, res, next) => {
       last_gift_appeal,
       first_gift_date,
       pmm,
-      exclude,
-      deceased,
+      exclude = false,
+      deceased = false,
       contact_phone_type,
       phone_restrictions,
       email_restrictions,
@@ -45,34 +46,59 @@ export const createDonor = async (req, res, next) => {
     } = req.body;
 
     if (!pmm) {
-      const err = new Error('PMM is required');
-      err.statusCode = 400;
-      err.isPublic = true;
-      return next(err);
+      return next({
+        statusCode: 400,
+        message: 'PMM is required',
+        isPublic: true
+      });
     }
 
-    //Check for existing donor
-    const existingDonor = await prisma.donor.findFirst({
-      where: {
+    const safeEnum = (value, fallback) => {
+      return typeof value === 'string' && value.trim() !== '' ? value : fallback;
+    };
+
+    const newDonor = await prisma.donor.create({
+      data: {
         first_name,
+        nick_name,
         last_name,
         organization_name,
-        street_address
+        unit_number,
+        street_address,
+        city,
+        total_donation_amount: total_donation_amount ?? 0,
+        total_pledge,
+        largest_gift_amount,
+        largest_gift_appeal: largest_gift_appeal || null,
+        last_gift_amount,
+        last_gift_request: last_gift_request || null,
+        last_gift_appeal: last_gift_appeal || null,
+        first_gift_date,
+        pmm,
+        exclude,
+        deceased,
+        contact_phone_type: safeEnum(contact_phone_type, 'Mobile'),
+        phone_restrictions: phone_restrictions || null,
+        email_restrictions: email_restrictions || null,
+        communication_restrictions: communication_restrictions || null,
+        subscription_events_in_person: safeEnum(subscription_events_in_person, 'Opt_in'),
+        subscription_events_magazine: safeEnum(subscription_events_magazine, 'Opt_in'),
+        communication_preference: safeEnum(communication_preference, 'Thank_you'),
+        tags: {
+          create: tagIds.map((tagId) => ({
+            tag: {
+              connect: { id: tagId }
+            }
+          }))
+        }
+      },
+      include: {
+        tags: {
+          include: { tag: true }
+        }
       }
     });
 
-    if (existingDonor) {
-      const err = new Error('Donor already exists with the same name and address.');
-      err.statusCode = 409;
-      err.isPublic = true;
-      return next(err);
-    }
-
-    const newDonor = await prisma.donor.create({
-      data: donorData
-    });
-
-    console.log('Created donor result:', newDonor);
     return res.status(201).json({
       success: true,
       message: 'Donor created successfully',
@@ -87,6 +113,9 @@ export const createDonor = async (req, res, next) => {
     });
   }
 };
+
+
+
 
 // function to get all donors
 export const getAllDonors = async (req, res) => {
@@ -130,6 +159,7 @@ export const getDonors = async (req, res, next) => {
   try {
     if (!req.user) return next(errorHandler(401, 'Unauthorized: Please log in'));
 
+
     const {
       search,
       page = 1,
@@ -147,6 +177,8 @@ export const getDonors = async (req, res, next) => {
       emailRestrictions,
       communicationRestrictions
     } = req.query;
+    console.log("Received filters:", req.query);
+    console.log("City:", req.query.city);
 
     const pageNum = parseInt(page);
     const limitNum = parseInt(limit);
@@ -260,7 +292,6 @@ export const getDonors = async (req, res, next) => {
       skip,
       take: limitNum
     });
-
     res.status(200).json({
       donors,
       pagination: {

@@ -15,11 +15,13 @@ export default function CurrentDonorsList({ donors, onStatusChange, onRemove }) 
             <div className="p-2 space-y-1">
               {donors.map((donor) => (
                 <div
-                  key={donor.value}
+                  key={donor.id || donor.value}
                   className="flex justify-between items-center p-3 rounded-md hover:bg-muted"
                 >
                   <div className="flex-1 min-w-0">
-                    <div className="font-medium truncate">{donor.label}</div>
+                    <div className="font-medium truncate">
+                      {donor.label || donor.organization_name || `${donor.first_name} ${donor.last_name}`}
+                    </div>
                     <div className="flex items-center text-sm text-muted-foreground">
                       {donor.city && <span className="mr-2">{donor.city}</span>}
                       {donor.totalDonation > 0 && (
@@ -28,15 +30,15 @@ export default function CurrentDonorsList({ donors, onStatusChange, onRemove }) 
                     </div>
                     {donor.tags && donor.tags.length > 0 && (
                       <div className="flex flex-wrap gap-1 mt-1">
-                        {donor.tags.map(tag => (
+                        {donor.tags.map((tag) => (
                           <Badge
-                            key={tag.id}
+                            key={`${donor.id || donor.value}-${tag.id || tag.name}`} // ✅ 唯一 key
                             variant="outline"
                             className="text-xs"
                             style={{
                               backgroundColor: tag.color ? `${tag.color}20` : undefined,
                               borderColor: tag.color,
-                              color: tag.color
+                              color: tag.color,
                             }}
                           >
                             {tag.name}
@@ -48,7 +50,7 @@ export default function CurrentDonorsList({ donors, onStatusChange, onRemove }) 
                   <div className="flex items-center gap-2">
                     <Select
                       value={donor.status}
-                      onValueChange={(value) => onStatusChange(donor.value, value)}
+                      onValueChange={(value) => onStatusChange(donor.id || donor.value, value)}
                     >
                       <SelectTrigger className="w-32">
                         <SelectValue placeholder="Status" />
@@ -79,4 +81,4 @@ export default function CurrentDonorsList({ donors, onStatusChange, onRemove }) 
       </Card>
     </div>
   );
-} 
+}
