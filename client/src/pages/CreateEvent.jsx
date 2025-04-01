@@ -10,6 +10,7 @@ import { MultiSelect } from "@/components/ui/multi-select";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Users, Trash2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import axios from "axios";
 import CurrentDonorsList from "@/components/CurrentDonorsList";
 import DonorSelection from "@/components/DonorSelection";
 
@@ -30,6 +31,13 @@ export default function CreateEvent() {
   const [loading, setLoading] = useState(false);
   const [tags, setTags] = useState([]);
   const [loadingTags, setLoadingTags] = useState(false);
+  const [loadingDonors, setLoadingDonors] = useState(false);
+  const [targetDonorCount, setTargetDonorCount] = useState(10);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filteredDonors, setFilteredDonors] = useState([]);
+  const [isRecommending, setIsRecommending] = useState(false);
+  const [recommendedDonors, setRecommendedDonors] = useState([]);
+
 
   // 获取所有标签
   useEffect(() => {
@@ -74,6 +82,86 @@ export default function CreateEvent() {
   };
 
   const handleTagsChange = (selectedTags) => {
+    setFormData((prev) => ({
+      ...prev,
+      tags: selectedTags,
+    }));
+  };
+
+  const handleDonorsChange = (selectedDonors) => {
+    setFormData((prev) => ({
+      ...prev,
+      donors: selectedDonors,
+    }));
+  };
+
+  const handleStatusChange = (status) => {
+    setFormData((prev) => ({
+      ...prev,
+      status,
+    }));
+  };
+
+  const recommendDonors = async () => {
+    setIsRecommending(true);
+    try {
+      const response = await axios.get('/api/donor/recommend', {
+        withCredentials: true,
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+  
+      if (response.data.success) {
+        const formattedDonors = response.data.recommendations.map(donor => ({
+          value: donor.id,
+          label: donor.organization_name || `${donor.first_name} ${donor.last_name}`,
+          city: donor.city,
+          tags: donor.tags?.map(t => t.tag) || [],
+          totalDonation: donor.total_donation_amount || 0,
+        }));
+  
+        setRecommendedDonors(formattedDonors);
+  
+        // 自动将推荐捐赠者添加到已选择列表（避免重复）
+        setFormData(prev => ({
+          ...prev,
+          donors: [
+            ...prev.donors,
+            ...formattedDonors.filter(newDonor => !prev.donors.some(d => d.value === newDonor.value))
+          ],
+          donor_count: prev.donors.length + formattedDonors.filter(newDonor => !prev.donors.some(d => d.value === newDonor.value)).length
+        }));
+      } else {
+        throw new Error('Failed to get recommendations');
+      }
+    } catch (error) {
+      console.error('Error fetching recommendations:', error);
+      setError('Unable to fetch recommendations');
+    } finally {
+      setIsRecommending(false);
+    }
+  };
+  
+
+  const addDonor = (donor) => {
+    if (!formData.donors.some(d => d.value === donor.value)) {
+      const updatedDonors = [...formData.donors, donor];
+      setFormData(prev => ({
+        ...prev,
+        donors: updatedDonors,
+        donor_count: updatedDonors.length
+      }));
+    }
+  };
+
+  const removeDonor = (donorId) => {
+    const updatedDonors = formData.donors.filter(d => d.value !== donorId);
+    setFormData(prev => ({
+      ...prev,
+      donors: updatedDonors,
+      donor_count: updatedDonors.length
+    }));
     setFormData(prev => ({ ...prev, tags: selectedTags }));
   };
 

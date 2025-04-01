@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, ContactPhoneType, SubscriptionPreference, CommunicationPreference } from '@prisma/client';
 import { Decimal } from '@prisma/client/runtime/library';
 import {errorHandler} from "../utils/error.js";
 import csv from 'csv-parser';
@@ -69,61 +69,24 @@ export const createDonor = async (req, res, next) => {
     }
 
     const newDonor = await prisma.donor.create({
-      data: {
-        first_name,
-        nick_name: nick_name || null,
-        last_name,
-        organization_name: organization_name || null,
-        unit_number: unit_number || null,
-        street_address,
-        city,
-        total_donation_amount: total_donation_amount || 0,
-        total_pledge: total_pledge || null,
-        largest_gift_amount: largest_gift_amount || null,
-        largest_gift_appeal: largest_gift_appeal || null,
-        last_gift_amount: last_gift_amount || null,
-        last_gift_request: last_gift_request || null,
-        last_gift_appeal: last_gift_appeal || null,
-        first_gift_date: first_gift_date || null,
-        pmm,
-        exclude: exclude ?? false,
-        deceased: deceased ?? false,
-        contact_phone_type: contact_phone_type || null,
-        phone_restrictions: phone_restrictions || null,
-        email_restrictions: email_restrictions || null,
-        communication_restrictions: communication_restrictions || null,
-        subscription_events_in_person: subscription_events_in_person || null,
-        subscription_events_magazine: subscription_events_magazine || null,
-        communication_preference: communication_preference || null,
-        tags: tagIds.length > 0
-          ? {
-              create: tagIds.map((tagId) => ({
-                tag: { connect: { id: tagId } },
-              })),
-            }
-          : undefined,
-      },
-      include: {
-        tags: {
-          include: {
-            tag: true,
-          },
-        },
-      },
+      data: donorData
     });
 
+    console.log('Created donor result:', newDonor);
     return res.status(201).json({
+      success: true,
       message: 'Donor created successfully',
       donor: newDonor
     });
-
   } catch (error) {
-    console.error("Error creating donor:", error);
-    next(error); 
+    console.error('Error creating donor:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to create donor',
+      error: error.message
+    });
   }
 };
-
-
 
 // function to get all donors
 export const getAllDonors = async (req, res) => {
@@ -177,7 +140,12 @@ export const getDonors = async (req, res, next) => {
       maxDonationAmount,
       tags,
       city,
-      pmm
+      pmm,
+      largestGiftAppeal,
+      contactPhoneType,
+      phoneRestrictions,
+      emailRestrictions,
+      communicationRestrictions
     } = req.query;
 
     const pageNum = parseInt(page);
@@ -188,13 +156,50 @@ export const getDonors = async (req, res, next) => {
 
     // city filter allow multiple cities
     if (city) {
-      const cities = Array.isArray(city) ? city : [city];
+      const cities = typeof city === 'string' ? city.split(',') : city;
       whereClause.city = { in: cities };
     }
 
     // pmm filter (partial match)
     if (pmm) {
       whereClause.pmm = { contains: pmm };
+    }
+
+    // Largest gift appeal filter
+    if (largestGiftAppeal) {
+      whereClause.largest_gift_appeal = largestGiftAppeal;
+    }
+
+    // Contact phone type filter
+    if (contactPhoneType && contactPhoneType !== 'all') {
+      whereClause.contact_phone_type = contactPhoneType;
+    }
+
+    // Phone restrictions filter
+    if (phoneRestrictions) {
+      if (phoneRestrictions === 'None') {
+        whereClause.phone_restrictions = null;
+      } else {
+        whereClause.phone_restrictions = phoneRestrictions;
+      }
+    }
+
+    // Email restrictions filter
+    if (emailRestrictions) {
+      if (emailRestrictions === 'None') {
+        whereClause.email_restrictions = null;
+      } else {
+        whereClause.email_restrictions = emailRestrictions;
+      }
+    }
+
+    // Communication restrictions filter
+    if (communicationRestrictions) {
+      if (communicationRestrictions === 'None') {
+        whereClause.communication_restrictions = null;
+      } else {
+        whereClause.communication_restrictions = communicationRestrictions;
+      }
     }
 
     // Donation filter
@@ -270,52 +275,122 @@ export const getDonors = async (req, res, next) => {
   }
 };
 
-
-
-
-export const getDonorById = async (req, res) => {
+export const getDonorById = async (req, res, next) => {
   try {
-    if (!req.user) return res.status(401).json({ message: 'Unauthorized: Please log in' });
+    if (!req.user) {
+      return res.status(401).json({ message: 'Unauthorized: Please log in' });
+    }
 
     const { id } = req.params;
-
     const donor = await prisma.donor.findUnique({
       where: { id },
       include: {
-        tags: { include: { tag: true } },
-        interest_domains: { include: { interest_domain: true } },
-        events: true
+        tags: {
+          include: {
+            tag: true
+          }
+        }
       }
     });
 
-    if (!donor) return res.status(404).json({ message: 'Donor not found' });
+    if (!donor) {
+      return res.status(404).json({ message: 'Donor not found' });
+    }
 
     res.status(200).json(donor);
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching donor', error: error.message });
+    next(error);
   }
 };
 
-export const updateDonor = async (req, res) => {
+export const updateDonor = async (req, res, next) => {
   try {
-    if (!req.user) return res.status(401).json({ message: 'Unauthorized: Please log in' });
-
     const { id } = req.params;
-    const updateData = req.body;
+    console.log('Updating donor with ID:', id);
+    console.log('Update data received:', req.body);
 
-    const existingDonor = await prisma.donor.findUnique({ where: { id } });
-    if (!existingDonor || existingDonor.is_deleted)
-      return res.status(404).json({ message: 'Donor not found' });
+    // 提取标签 ID
+    const { tagIds, ...donorData } = req.body;
 
-    const updatedDonor = await prisma.donor.update({
-      where: { id },
-      data: updateData
+    // 处理数值字段
+    const updateData = {
+      ...donorData,
+      total_donation_amount: donorData.total_donation_amount 
+        ? new Decimal(donorData.total_donation_amount) 
+        : new Decimal(0),
+      total_pledge: donorData.total_pledge 
+        ? new Decimal(donorData.total_pledge) 
+        : null,
+      largest_gift_amount: donorData.largest_gift_amount 
+        ? new Decimal(donorData.largest_gift_amount) 
+        : null,
+      last_gift_amount: donorData.last_gift_amount 
+        ? new Decimal(donorData.last_gift_amount) 
+        : null,
+    };
+
+    // 移除不需要更新的字段
+    delete updateData.id;
+    delete updateData.created_at;
+    delete updateData.updated_at;
+    delete updateData.tags;
+    delete updateData.events;
+
+    console.log('Processed update data:', updateData);
+
+    // 开始事务处理
+    const updatedDonor = await prisma.$transaction(async (tx) => {
+      // 1. 更新捐赠者基本信息
+      const donor = await tx.donor.update({
+        where: { id },
+        data: updateData,
+      });
+
+      // 2. 如果提供了标签 ID，更新标签关联
+      if (tagIds && Array.isArray(tagIds)) {
+        // 删除现有标签关联
+        await tx.donorTag.deleteMany({
+          where: { donor_id: id }
+        });
+
+        // 创建新的标签关联
+        for (const tagId of tagIds) {
+          await tx.donorTag.create({
+            data: {
+              donor_id: id,
+              tag_id: tagId
+            }
+          });
+        }
+      }
+
+      // 返回更新后的捐赠者数据，包括标签
+      return tx.donor.findUnique({
+        where: { id },
+        include: {
+          tags: {
+            include: {
+              tag: true
+            }
+          }
+        }
+      });
     });
 
-    res.status(200).json({ message: 'Donor updated successfully', donor: updatedDonor });
+    console.log('Donor updated successfully');
+
+    return res.status(200).json({
+      success: true,
+      message: 'Donor updated successfully',
+      donor: updatedDonor
+    });
   } catch (error) {
     console.error('Error updating donor:', error);
-    res.status(500).json({ message: 'Error updating donor', error: error.message });
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to update donor',
+      error: error.message
+    });
   }
 };
 
@@ -383,11 +458,11 @@ export const importDonorsCsv = async (req, res, next) => {
           unit_number: row.address_line2 || null,
           street_address: row.address_line1,
           city: normalizeCity(row.city),
-          total_donation_amount: parseFloat(row.total_donations) || 0,
-          total_pledge: row.total_pledge ? parseFloat(row.total_pledge) : null,
-          largest_gift_amount: row.largest_gift_amount ? parseFloat(row.largest_gift_amount) : null,
+          total_donation_amount: new Decimal(parseFloat(row.total_donations) || 0),
+          total_pledge: row.total_pledge ? new Decimal(parseFloat(row.total_pledge)) : null,
+          largest_gift_amount: row.largest_gift_amount ? new Decimal(parseFloat(row.largest_gift_amount)) : null,
           largest_gift_appeal: row.largest_gift_appeal || null,
-          last_gift_amount: row.last_gift_amount ? parseFloat(row.last_gift_amount) : null,
+          last_gift_amount: row.last_gift_amount ? new Decimal(parseFloat(row.last_gift_amount)) : null,
           last_gift_request: row.last_gift_request || null,
           last_gift_appeal: row.last_gift_appeal || null,
           first_gift_date: parseDate(row.first_gift_date),
@@ -460,62 +535,38 @@ export const importDonorsCsv = async (req, res, next) => {
   }
 };
 
-export const recommendDonors = async (req, res, next) => {
+export const getAvailableCities = async (req, res, next) => {
   try {
     if (!req.user) {
       return res.status(401).json({ message: 'Unauthorized: Please log in' });
     }
 
-    const { tagIds = [], count = 10 } = req.body;
-    
-    if (tagIds.length === 0) {
-      const topDonors = await prisma.donor.findMany({
-        where: {
-          exclude: false,
-          deceased: false
-        },
-        orderBy: {
-          total_donation_amount: 'desc'
-        },
-        take: count,
-        include: {
-          tags: {
-            include: {
-              tag: true
-            }
-          }
-        }
-      });
-      
-      const formattedDonors = topDonors.map(donor => ({
-        value: donor.id,
-        label: donor.organization_name || `${donor.first_name} ${donor.last_name}`,
-        tags: donor.tags.map(t => t.tag),
-        totalDonation: donor.total_donation_amount || 0,
-        city: donor.city
-      }));
-      
-      return res.status(200).json({ donors: formattedDonors });
-    }
-    
-    const donorsWithTags = await prisma.donor.findMany({
-      where: {
-        exclude: false,
-        deceased: false,
-        tags: {
-          some: {
-            tag_id: {
-              in: tagIds
-            }
-          }
-        }
+    const cities = await prisma.donor.findMany({
+      where: { is_deleted: false },
+      select: { city: true },
+      distinct: ['city'],
+      orderBy: { city: 'asc' }
+    });
+
+    res.status(200).json({
+      cities: cities.map(city => city.city)
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const recommendDonors = async (req, res) => {
+  try {
+    console.log('Recommend endpoint hit in controller');
+
+    const recommendations = await prisma.donor.findMany({
+      where: { 
+        is_deleted: false 
       },
-      include: {
-        tags: {
-          include: {
-            tag: true
-          }
-        }
+      take: 10,
+      orderBy: {
+        created_at: 'desc'
       }
     });
     
@@ -543,6 +594,10 @@ export const recommendDonors = async (req, res, next) => {
     
     res.status(200).json({ donors: recommendedDonors });
   } catch (error) {
-    next(errorHandler(error));
+    console.error('Error in recommendDonors:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to get recommendations'
+    });
   }
 };

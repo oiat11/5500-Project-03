@@ -11,6 +11,7 @@ import Events from './pages/Events'
 import PrivateRoute from './components/PrivateRoute'
 import Settings from './pages/Settings'
 import CreateEvent from './pages/CreateEvent'
+import DonorDetails from './pages/DonorDetails'
 import EventDetails from './pages/EventDetails'
 import UpdateEvent from './pages/UpdateEvent'
 
@@ -39,6 +40,7 @@ function App() {
             </SidebarProvider>
           }>
             <Route path="/donors" element={<Donors />} />
+            <Route path="/donors/:id" element={<DonorDetails />} />
             <Route path="/donors/create" element={<CreateDonor />} />
             <Route path="/events" element={<Events />} />
             <Route path="/events/create" element={<CreateEvent />} />

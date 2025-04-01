@@ -86,19 +86,18 @@ export default function Donors() {
       if (filters.communicationRestrictions)
         params.communicationRestrictions = filters.communicationRestrictions;
       
-      // Handle company type filter if isCompany is still set
-      if (filters.isCompany !== undefined) {
-        params.isCompany = filters.isCompany;
-      }
 
       // Handle array parameters
       if (filters.cities && filters.cities.length > 0) {
         params.city = filters.cities;
       }
       
-      // Handle tags filter
+      // Handle tags filter with MultiSelect format
       if (filters.tags && filters.tags.length > 0) {
-        params.tags = filters.tags;
+        // use an array to send tags
+        params.tags = Array.isArray(filters.tags[0]) ? 
+          filters.tags : 
+          filters.tags.map(tag => typeof tag === 'object' ? tag.value : tag);
       }
 
       const response = await axios.get(`/api/donor`, { params });
@@ -280,6 +279,12 @@ export default function Donors() {
     };
   }, []);
 
+  const handleDonorClick = (donor) => {
+    // 将整个 donor 对象存储在 localStorage 中
+    localStorage.setItem('selectedDonor', JSON.stringify(donor));
+    navigate(`/donors/${donor.id}`);
+  };
+
   return (
     <div className="w-full max-w-[1200px] mx-auto px-4">
       <div className="flex items-center justify-between w-full mb-6">
@@ -424,13 +429,7 @@ export default function Donors() {
                     <TableRow
                       key={donor.id}
                       className="cursor-pointer hover:bg-slate-50"
-                      onClick={(e) => {
-                        if (
-                          e.target.type !== "checkbox" &&
-                          !e.target.closest(".checkbox-wrapper")
-                        )
-                          navigate(`/donors/${donor.id}`);
-                      }}
+                      onClick={() => handleDonorClick(donor)}
                     >
                       <TableCell className="checkbox-wrapper">
                         <Checkbox
