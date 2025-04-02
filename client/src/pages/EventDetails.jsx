@@ -36,7 +36,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import DonorSelection from "@/components/DonorSelection";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
 
 export default function EventDetails() {
   const { id } = useParams();
@@ -201,6 +208,75 @@ export default function EventDetails() {
             {status || "Unknown"}
           </Badge>
         );
+    }
+  };
+
+  // Update the handleDonorStatusChange function to use the event update endpoint
+  const handleDonorStatusChange = async (donorId, newStatus) => {
+    try {
+      setLoading(true);
+      
+      // First, update the local state for immediate feedback
+      const updatedDonors = event.donors.map(donor => 
+        donor.donor_id === donorId 
+          ? { ...donor, status: newStatus } 
+          : donor
+      );
+      
+      setEvent(prev => ({
+        ...prev,
+        donors: updatedDonors
+      }));
+      
+      // Then send the update to the server using the event update endpoint
+      const response = await fetch(`/api/event/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          // Include all event data to avoid losing information
+          name: event.name,
+          description: event.description,
+          date: event.date,
+          location: event.location,
+          status: event.status,
+          // Send the updated donors array with the new status
+          donors: updatedDonors.map(donor => ({
+            donorId: donor.donor_id,
+            status: donor.status
+          }))
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update donor status");
+      }
+
+      toast({
+        title: "Status updated",
+        description: "Donor status has been updated successfully",
+      });
+    } catch (error) {
+      console.error("Error updating donor status:", error);
+      
+      // Revert the local state change if the API call fails
+      setEvent(prev => ({
+        ...prev,
+        donors: prev.donors.map(donor => 
+          donor.donor_id === donorId 
+            ? { ...donor, status: donor.status } // Revert to original status
+            : donor
+        )
+      }));
+      
+      toast({
+        title: "Error",
+        description: "Failed to update donor status",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -390,26 +466,77 @@ export default function EventDetails() {
                         {event.donors.map((donorEvent) => (
                           <TableRow
                             key={donorEvent.donor_id}
-                            className="cursor-pointer hover:bg-slate-50"
-                            onClick={() =>
-                              navigate(`/donors/${donorEvent.donor_id}`)
-                            }
+                            className="hover:bg-slate-50"
                           >
-                            <TableCell className="font-medium">
+                            <TableCell 
+                              className="font-medium cursor-pointer"
+                              onClick={() => navigate(`/donors/${donorEvent.donor_id}`)}
+                            >
                               {donorEvent.donor.organization_name ||
                                 `${donorEvent.donor.first_name} ${donorEvent.donor.last_name}`}
                             </TableCell>
-                            <TableCell>
-                              {getParticipationStatusBadge(donorEvent.status)}
+                            <TableCell onClick={(e) => e.stopPropagation()}>
+                              <Select
+                                value={donorEvent.status}
+                                onValueChange={(value) => handleDonorStatusChange(donorEvent.donor_id, value)}
+                                disabled={!isEventOwner}
+                              >
+                                <SelectTrigger className="w-[130px]">
+                                  <SelectValue>
+                                    {donorEvent.status === "invited" && (
+                                      <span className="flex items-center">
+                                        <span className="h-2 w-2 rounded-full bg-blue-500 mr-2"></span>
+                                        Invited
+                                      </span>
+                                    )}
+                                    {donorEvent.status === "confirmed" && (
+                                      <span className="flex items-center">
+                                        <span className="h-2 w-2 rounded-full bg-green-500 mr-2"></span>
+                                        Confirmed
+                                      </span>
+                                    )}
+                                    {donorEvent.status === "declined" && (
+                                      <span className="flex items-center">
+                                        <span className="h-2 w-2 rounded-full bg-red-500 mr-2"></span>
+                                        Declined
+                                      </span>
+                                    )}
+                                  </SelectValue>
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="invited" className="text-blue-600">
+                                    <span className="flex items-center">
+                                      <span className="h-2 w-2 rounded-full bg-blue-500 mr-2"></span>
+                                      Invited
+                                    </span>
+                                  </SelectItem>
+                                  <SelectItem value="confirmed" className="text-green-600">
+                                    <span className="flex items-center">
+                                      <span className="h-2 w-2 rounded-full bg-green-500 mr-2"></span>
+                                      Confirmed
+                                    </span>
+                                  </SelectItem>
+                                  <SelectItem value="declined" className="text-red-600">
+                                    <span className="flex items-center">
+                                      <span className="h-2 w-2 rounded-full bg-red-500 mr-2"></span>
+                                      Declined
+                                    </span>
+                                  </SelectItem>
+                                </SelectContent>
+                              </Select>
                             </TableCell>
-                            <TableCell>
+                            <TableCell 
+                              className="cursor-pointer"
+                              onClick={() => navigate(`/donors/${donorEvent.donor_id}`)}
+                            >
                               {donorEvent.donor.total_donation_amount
-                                ? `$${parseFloat(
-                                    donorEvent.donor.total_donation_amount
-                                  ).toLocaleString()}`
+                                ? `$${parseFloat(donorEvent.donor.total_donation_amount).toLocaleString()}`
                                 : "$0"}
                             </TableCell>
-                            <TableCell>
+                            <TableCell 
+                              className="cursor-pointer"
+                              onClick={() => navigate(`/donors/${donorEvent.donor_id}`)}
+                            >
                               {donorEvent.donor.city
                                 ? donorEvent.donor.city.replace(/_/g, " ")
                                 : "N/A"}
