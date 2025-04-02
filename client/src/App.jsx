@@ -32,7 +32,7 @@ function App() {
                 <AppSidebar />
                 <main className="flex-1">
                   <SidebarTrigger />
-                  <div className="p-8">
+                  <div className=" px-6 py-8">
                     <Outlet />
                   </div>
                 </main>
