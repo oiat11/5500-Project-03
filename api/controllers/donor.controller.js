@@ -12,7 +12,7 @@ export const createDonor = async (req, res, next) => {
       return next({
         statusCode: 401,
         message: 'Unauthorized: Please log in',
-        isPublic: true
+        isPublic: true,
       });
     }
 
@@ -42,14 +42,14 @@ export const createDonor = async (req, res, next) => {
       subscription_events_in_person,
       subscription_events_magazine,
       communication_preference,
-      tagIds = []
+      tagIds = [],
     } = req.body;
 
     if (!pmm) {
       return next({
         statusCode: 400,
         message: 'PMM is required',
-        isPublic: true
+        isPublic: true,
       });
     }
 
@@ -57,6 +57,24 @@ export const createDonor = async (req, res, next) => {
       return typeof value === 'string' && value.trim() !== '' ? value : fallback;
     };
 
+    const existingDonor = await prisma.donor.findFirst({
+      where: {
+        first_name,
+        last_name,
+        organization_name,
+        street_address,
+      },
+    });
+
+    if (existingDonor) {
+      return next({
+        statusCode: 409,
+        message: 'Donor already exists with the same name and address.',
+        isPublic: true,
+      });
+    }
+
+    //Create the donor
     const newDonor = await prisma.donor.create({
       data: {
         first_name,
@@ -84,36 +102,42 @@ export const createDonor = async (req, res, next) => {
         subscription_events_in_person: safeEnum(subscription_events_in_person, 'Opt_in'),
         subscription_events_magazine: safeEnum(subscription_events_magazine, 'Opt_in'),
         communication_preference: safeEnum(communication_preference, 'Thank_you'),
-        tags: {
-          create: tagIds.map((tagId) => ({
-            tag: {
-              connect: { id: tagId }
-            }
-          }))
-        }
       },
+    });
+
+    //Create donor-tag relations manually
+    if (tagIds.length > 0) {
+      await prisma.donorTag.createMany({
+        data: tagIds.map((tagId) => ({
+          donor_id: newDonor.id,
+          tag_id: tagId,
+        })),
+        skipDuplicates: true,
+      });
+    }
+
+    //Fetch donor again including tags
+    const donorWithTags = await prisma.donor.findUnique({
+      where: { id: newDonor.id },
       include: {
-        tags: {
-          include: { tag: true }
-        }
-      }
+        tags: { include: { tag: true } },
+      },
     });
 
     return res.status(201).json({
       success: true,
       message: 'Donor created successfully',
-      donor: newDonor
+      donor: donorWithTags,
     });
   } catch (error) {
     console.error('Error creating donor:', error);
     return res.status(500).json({
       success: false,
       message: 'Failed to create donor',
-      error: error.message
+      error: error.message,
     });
   }
 };
-
 
 
 

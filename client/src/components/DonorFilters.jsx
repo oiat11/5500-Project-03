@@ -162,6 +162,22 @@ const DonorFilters = ({ onFilterChange, availableFilters = {} }) => {
     onFilterChange(queryParams);
   }, [filters, onFilterChange]);
 
+  // Handler to clear all filters at once
+  const clearAllFilters = () => {
+    setFilters({
+      minDonationAmount: '',
+      maxDonationAmount: '',
+      largestGiftAppeal: '',
+      cities: [],
+      contactPhoneType: '',
+      phoneRestrictions: '',
+      emailRestrictions: '',
+      communicationRestrictions: '',
+      tags: [],
+      tagSearch: ''
+    });
+  };
+
   const phoneTypeOptions = [
     { value: 'all', label: 'All' },
     { value: 'Home', label: 'Home' },
@@ -228,6 +244,16 @@ const DonorFilters = ({ onFilterChange, availableFilters = {} }) => {
 
         {expanded && (
           <div className="space-y-4">
+            <div className="flex justify-end mb-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={clearAllFilters}
+              >
+                Clear All
+              </Button>
+            </div>
+            
             {/* Basic Filters */}
             <div className="flex flex-col gap-4 mb-4">
               {/* Total Donations Amount Filter */}

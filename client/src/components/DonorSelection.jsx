@@ -25,27 +25,35 @@ export default function DonorSelection({ donors, selectedDonors, onToggle }) {
                     {donor.organization_name || `${donor.first_name} ${donor.last_name}`}
                   </div>
                   <div className="flex items-center text-sm text-muted-foreground">
-                    {donor.city && <span className="mr-2">{donor.city}</span>}
+                    {donor.city && <span className="mr-2">{donor.city.replace(/_/g, ' ')}</span>}
                     {donor.total_donation_amount > 0 && (
-                      <span>${donor.total_donation_amount.toLocaleString()}</span>
+                      <span>Total Donation: ${donor.total_donation_amount.toLocaleString()}</span>
                     )}
                   </div>
                   {donor.tags?.length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-1">
-                      {donor.tags.map(tag => (
-                        <Badge
-                          key={`${donor.id}-${tag.id || tag.name}`}
-                          variant="outline"
-                          className="text-xs"
-                          style={{
-                            backgroundColor: tag.color ? `${tag.color}20` : undefined,
-                            borderColor: tag.color,
-                            color: tag.color
-                          }}
-                        >
-                          {tag.name}
-                        </Badge>
-                      ))}
+                      {donor.tags.map((tagItem, index) => {
+                        // Extract the actual tag object from the nested structure
+                        const tag = tagItem.tag || tagItem;
+                        const tagId = tag.id || tagItem.tag_id || index;
+                        const tagName = tag.name || '';
+                        const tagColor = tag.color || '#6366f1';
+                        
+                        return (
+                          <Badge
+                            key={`${donor.id}-${tagId}`}
+                            variant="outline"
+                            className="text-xs px-2 py-0.5"
+                            style={{
+                              backgroundColor: `${tagColor}20`,
+                              borderColor: tagColor,
+                              color: tagColor
+                            }}
+                          >
+                            {tagName}
+                          </Badge>
+                        );
+                      })}
                     </div>
                   )}
                 </div>
