@@ -43,6 +43,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import EditEventDetailsModal from "@/components/EditEventDetailsModal"; 
 
 
 export default function EventDetails() {
@@ -55,6 +56,7 @@ export default function EventDetails() {
   const [deleteDialog, setDeleteDialog] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [isEventOwner, setIsEventOwner] = useState(false);
+  const [showEditDetails, setShowEditDetails] = useState(false); 
   
   // 添加这些状态用于 DonorSelection 组件
   const [formData, setFormData] = useState({
@@ -330,14 +332,6 @@ export default function EventDetails() {
             {isEventOwner && (
               <>
                 <Button
-                  variant="default"
-                  onClick={() => navigate(`/events/${id}/edit`)}
-                  className="flex items-center gap-1"
-                >
-                  <Edit className="h-4 w-4" />
-                  Edit Event
-                </Button>
-                <Button
                   variant="destructive"
                   onClick={() => setDeleteDialog(true)}
                   className="flex items-center gap-1"
@@ -356,10 +350,22 @@ export default function EventDetails() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {/* Event Details */}
           <div className="md:col-span-2 space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Event Details</CardTitle>
-              </CardHeader>
+          <Card className="relative">
+  {/* Edit Button at top-right corner */}
+  {isEventOwner && (
+    <Button
+      size="sm"
+      variant="ghost"
+      onClick={() => setShowEditDetails(true)}
+      className="absolute top-4 right-4 z-10"
+    >
+      <Edit className="h-4 w-4" />
+    </Button>
+  )}
+
+  <CardHeader>
+    <CardTitle>Event Details</CardTitle>
+  </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="flex items-center gap-2">
@@ -661,6 +667,15 @@ export default function EventDetails() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <EditEventDetailsModal
+  open={showEditDetails}
+  onClose={() => setShowEditDetails(false)}
+  eventData={{ ...event, id }}
+  onSave={() => window.location.reload()}
+/>
+
     </div>
+
+    
   );
 } 
