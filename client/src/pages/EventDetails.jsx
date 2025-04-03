@@ -57,8 +57,8 @@ export default function EventDetails() {
   const [deleting, setDeleting] = useState(false);
   const [isEventOwner, setIsEventOwner] = useState(false);
   const [showEditDetails, setShowEditDetails] = useState(false); 
-  
-  // 添加这些状态用于 DonorSelection 组件
+  const [saving, setSaving] = useState(false);
+
   const [formData, setFormData] = useState({
     donors: [],
     tags: []
@@ -216,84 +216,56 @@ export default function EventDetails() {
   // Update the handleDonorStatusChange function to use the event update endpoint
   const handleDonorStatusChange = async (donorId, newStatus) => {
     try {
-      setLoading(true);
-      
-      // First, update the local state for immediate feedback
-      const updatedDonors = event.donors.map(donor => 
-        donor.donor_id === donorId 
-          ? { ...donor, status: newStatus } 
+      setSaving(true);
+  
+      const updatedDonors = event.donors.map(donor =>
+        donor.donor_id === donorId
+          ? { ...donor, status: newStatus }
           : donor
       );
-      
+  
       setEvent(prev => ({
         ...prev,
         donors: updatedDonors
       }));
-      
-      // Then send the update to the server using the event update endpoint
+  
       const response = await fetch(`/api/event/${id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          // Include all event data to avoid losing information
           name: event.name,
           description: event.description,
           date: event.date,
           location: event.location,
           status: event.status,
-          // Send the updated donors array with the new status
           donors: updatedDonors.map(donor => ({
             donorId: donor.donor_id,
             status: donor.status
           }))
         }),
       });
-
-      if (!response.ok) {
-        throw new Error("Failed to update donor status");
-      }
-
+  
+      if (!response.ok) throw new Error("Failed to update donor status");
+  
       toast({
         title: "Status updated",
         description: "Donor status has been updated successfully",
       });
     } catch (error) {
       console.error("Error updating donor status:", error);
-      
-      // Revert the local state change if the API call fails
-      setEvent(prev => ({
-        ...prev,
-        donors: prev.donors.map(donor => 
-          donor.donor_id === donorId 
-            ? { ...donor, status: donor.status } // Revert to original status
-            : donor
-        )
-      }));
-      
+  
       toast({
         title: "Error",
         description: "Failed to update donor status",
         variant: "destructive",
       });
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
-
-  if (loading) {
-    return (
-      <div className="container max-w-7xl mx-auto py-8 px-4">
-        <div className="flex justify-center items-center h-64">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-            <p className="mt-4 text-gray-500">Loading event details...</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  
 
   if (error || !event) {
     return (
@@ -448,9 +420,6 @@ export default function EventDetails() {
                     {event.donors?.length || 0} donors
                   </Badge>
                 </CardTitle>
-                <CardDescription>
-                  Donors invited to this event
-                </CardDescription>
               </CardHeader>
               <CardContent>
                 {!event.donors || event.donors.length === 0 ? (
