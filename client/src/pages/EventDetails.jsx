@@ -26,6 +26,7 @@ import {
   CheckCircle,
   XCircle,
   HelpCircle,
+  PlusCircle,
 } from "lucide-react";
 import {
   Dialog,
@@ -43,8 +44,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import EditEventDetailsModal from "@/components/EditEventDetailsModal"; 
-
+import EditEventDetailsModal from "@/components/EditEventDetailsModal";
+import AddDonorsModal from "@/components/AddDonorsModal";
 
 export default function EventDetails() {
   const { id } = useParams();
@@ -56,8 +57,9 @@ export default function EventDetails() {
   const [deleteDialog, setDeleteDialog] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [isEventOwner, setIsEventOwner] = useState(false);
-  const [showEditDetails, setShowEditDetails] = useState(false); 
+  const [showEditDetails, setShowEditDetails] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [showAddDonors, setShowAddDonors] = useState(false);
 
   const [formData, setFormData] = useState({
     donors: [],
@@ -84,7 +86,6 @@ export default function EventDetails() {
         setEvent(data.event);
         setIsEventOwner(data.isEventOwner);
         
-        // 设置 formData 以便 DonorSelection 组件使用
         setFormData({
           donors: data.event.donors.map(donorEvent => ({
             value: donorEvent.donor_id,
@@ -213,7 +214,6 @@ export default function EventDetails() {
     }
   };
 
-  // Update the handleDonorStatusChange function to use the event update endpoint
   const handleDonorStatusChange = async (donorId, newStatus) => {
     try {
       setSaving(true);
@@ -265,7 +265,52 @@ export default function EventDetails() {
       setSaving(false);
     }
   };
-  
+
+  const refreshEventData = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(`/api/event/${id}`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch event details");
+      }
+
+      const data = await response.json();
+      setEvent(data.event);
+      setIsEventOwner(data.isEventOwner);
+      
+      setFormData({
+        donors: data.event.donors.map(donorEvent => ({
+          value: donorEvent.donor_id,
+          label: donorEvent.donor.organization_name || 
+                `${donorEvent.donor.first_name} ${donorEvent.donor.last_name}`,
+          tags: donorEvent.donor.tags?.map(t => t.tag) || [],
+          totalDonation: donorEvent.donor.total_donation_amount || 0,
+          city: donorEvent.donor.city,
+          status: donorEvent.status
+        })),
+        tags: data.event.tags.map(tag => ({
+          value: tag.id,
+          label: tag.name,
+          color: tag.color
+        }))
+      });
+    } catch (err) {
+      console.error("Error refreshing event details:", err);
+      toast({
+        title: "Error",
+        description: "Failed to refresh event details",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   if (error || !event) {
     return (
@@ -322,22 +367,21 @@ export default function EventDetails() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {/* Event Details */}
           <div className="md:col-span-2 space-y-6">
-          <Card className="relative">
-  {/* Edit Button at top-right corner */}
-  {isEventOwner && (
-    <Button
-      size="sm"
-      variant="ghost"
-      onClick={() => setShowEditDetails(true)}
-      className="absolute top-4 right-4 z-10"
-    >
-      <Edit className="h-4 w-4" />
-    </Button>
-  )}
-
-  <CardHeader>
-    <CardTitle>Event Details</CardTitle>
-  </CardHeader>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle>Event Details</CardTitle>
+                {isEventOwner && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setShowEditDetails(true)}
+                    className="flex items-center gap-1"
+                  >
+                    <Edit className="h-4 w-4" />
+                    Edit Details
+                  </Button>
+                )}
+              </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="flex items-center gap-2">
@@ -411,15 +455,26 @@ export default function EventDetails() {
             {/* Donor List */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  <div className="flex items-center">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center">
                     <Users className="h-5 w-5 mr-2" />
                     Donors
-                  </div>
-                  <Badge variant="outline" className="ml-2">
-                    {event.donors?.length || 0} donors
-                  </Badge>
-                </CardTitle>
+                    <Badge variant="outline" className="ml-2">
+                      {event.donors?.length || 0} donors
+                    </Badge>
+                  </CardTitle>
+                  {isEventOwner && (
+                    <Button 
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setShowAddDonors(true)}
+                      className="flex items-center gap-1"
+                    >
+                      <PlusCircle className="h-4 w-4" />
+                      Add Donors
+                    </Button>
+                  )}
+                </div>
               </CardHeader>
               <CardContent>
                 {!event.donors || event.donors.length === 0 ? (
@@ -641,6 +696,73 @@ export default function EventDetails() {
   onClose={() => setShowEditDetails(false)}
   eventData={{ ...event, id }}
   onSave={() => window.location.reload()}
+/>
+<AddDonorsModal
+  isOpen={showAddDonors}
+  onClose={() => setShowAddDonors(false)}
+  onAddDonors={(newDonors) => {
+    // Handle adding the new donors to the event
+    const addDonorsToEvent = async (donors) => {
+      try {
+        setLoading(true);
+        
+        // Format donors for the API
+        const donorsToAdd = donors.map(donor => ({
+          donorId: donor.id,
+          status: donor.status || "invited"
+        }));
+        
+        // Get current donors to preserve their status
+        const currentDonors = event.donors.map(donor => ({
+          donorId: donor.donor_id,
+          status: donor.status
+        }));
+        
+        // Combine current and new donors
+        const updatedDonors = [...currentDonors, ...donorsToAdd];
+        
+        const response = await fetch(`/api/event/${id}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            name: event.name,
+            description: event.description,
+            date: event.date,
+            location: event.location,
+            status: event.status,
+            donors: updatedDonors
+          }),
+        });
+        
+        if (!response.ok) throw new Error("Failed to add donors to event");
+        
+        toast({
+          title: "Donors added",
+          description: `Successfully added ${donors.length} donors to the event`,
+        });
+        
+        // Refresh event data to show the updated donors
+        refreshEventData();
+      } catch (error) {
+        console.error("Error adding donors to event:", error);
+        toast({
+          title: "Error",
+          description: "Failed to add donors to the event",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    addDonorsToEvent(newDonors);
+  }}
+  existingDonors={event.donors.map(d => ({
+    id: d.donor_id,
+    ...d.donor
+  }))}
 />
 
     </div>

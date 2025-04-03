@@ -38,7 +38,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { MultiSelect } from "@/components/ui/multi-select";
 
-// 添加 axios 默认配置
 axios.defaults.withCredentials = true;
 
 export default function DonorDetails() {
@@ -70,7 +69,6 @@ export default function DonorDetails() {
       const donorData = response.data;
       setDonor(donorData);
       
-      // 转换 tags 为 MultiSelect 组件所需的格式
       const formattedTags = donorData.tags ? donorData.tags.map(tagLink => ({
         value: tagLink.tag.id,
         label: tagLink.tag.name,
@@ -246,16 +244,16 @@ export default function DonorDetails() {
       ...prev,
       [field]: value
     }));
-    console.log(`Field ${field} updated to:`, value); // 添加日志
+    console.log(`Field ${field} updated to:`, value); 
   };
 
-  // 添加数字输入处理函数
+
   const handleNumberInput = (field, value) => {
     const numberValue = value === '' ? null : parseFloat(value);
     handleInputChange(field, numberValue);
   };
 
-  // 渲染编辑模式下的字段
+
   const renderEditableField = (label, field, type = "text") => {
     return (
       <div className="space-y-2">
@@ -276,7 +274,6 @@ export default function DonorDetails() {
               <SelectValue placeholder={`Select ${label}`} />
             </SelectTrigger>
             <SelectContent>
-              {/* 添加选项 */}
             </SelectContent>
           </Select>
         ) : type === "checkbox" ? (
@@ -295,7 +292,6 @@ export default function DonorDetails() {
     );
   };
 
-  // 渲染只读模式下的字段
   const renderReadOnlyField = (label, value) => {
     return (
       <div>

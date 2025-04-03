@@ -9,7 +9,7 @@ export default function DonorSelection({ donors, selectedDonors, onToggle }) {
     <ScrollArea className="h-[300px] border rounded-md">
       <div className="p-2 space-y-1">
         {donors.length === 0 ? (
-          <div className="text-muted-foreground p-4 text-center">No donors to show.</div>
+          <div className="text-muted-foreground p-4 text-center">No donors match your filters. Try adjusting your filters to see more results.</div>
         ) : (
           donors.map((donor) => {
             const isSelected = selectedDonors.some(d => d.id === donor.id);
