@@ -17,7 +17,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ChevronDown, ChevronUp, MoreHorizontal } from "lucide-react";
+import { ChevronDown, ChevronUp, MoreHorizontal, UserPlus, FileText } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -298,6 +298,7 @@ export default function Donors() {
               fetchDonors(1, '', {});
             }} />
           <Button onClick={() => navigate("/donors/create")}>
+            <UserPlus className="mr-2 h-4 w-4" />
             Add Donor Manually
           </Button>
         </div>
