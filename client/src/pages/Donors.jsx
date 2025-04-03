@@ -421,7 +421,7 @@ export default function Donors() {
                 ) : donors.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={9} className="text-center py-8">
-                      No donors found.
+                      No donors found. Please start by adding donors manually or importing from a CSV file. If you have already imported donors, please adjust the filters or search bar.
                     </TableCell>
                   </TableRow>
                 ) : (
