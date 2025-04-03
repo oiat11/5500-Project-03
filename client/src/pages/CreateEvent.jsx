@@ -1,505 +1,509 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast";
-import { MultiSelect } from "@/components/ui/multi-select";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, X, UserPlus, UserMinus } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Separator } from "@/components/ui/separator";
-import axios from "axios";
+
+import DonorFilters from "@/components/DonorFilters";
+import CurrentDonorsList from "@/components/CurrentDonorsList";
+import DonorSelection from "@/components/DonorSelection";
 
 export default function CreateEvent() {
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  // Add step state to track the current step
+  const [currentStep, setCurrentStep] = useState(1);
+  const [targetDonorCount, setTargetDonorCount] = useState(null);
+
   const [formData, setFormData] = useState({
     name: "",
     description: "",
     date: "",
     location: "",
-    tags: [],
-    donors: [],
     status: "draft",
-    donor_count: 0
+    donors: [],
+    donor_count: 0,
   });
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [tags, setTags] = useState([]);
-  const [loadingTags, setLoadingTags] = useState(false);
-  const [loadingDonors, setLoadingDonors] = useState(false);
-  const [targetDonorCount, setTargetDonorCount] = useState(10);
-  const [searchQuery, setSearchQuery] = useState("");
+
+  const [searchTerm, setSearchTerm] = useState("");
+  const [activeFilters, setActiveFilters] = useState({});
+  const [availableFilters, setAvailableFilters] = useState({});
   const [filteredDonors, setFilteredDonors] = useState([]);
-  const [isRecommending, setIsRecommending] = useState(false);
-  const [recommendedDonors, setRecommendedDonors] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [sortBy, setSortBy] = useState("total_donation_amount");
+  const [sortOrder, setSortOrder] = useState("desc");
 
+  // First, let's add a state to track whether to show donors
+  const [showDonors, setShowDonors] = useState(false);
 
-  // 获取所有标签
-  useEffect(() => {
-    const fetchTags = async () => {
-      setLoadingTags(true);
-      try {
-        const res = await fetch("/api/tag", {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
-        
-        if (!res.ok) throw new Error("Failed to fetch tags");
-        
-        const data = await res.json();
-        if (!Array.isArray(data.tags)) throw new Error("Invalid tag data format");
-        setTags(data.tags.map(tag => ({
-          value: tag.id,
-          label: tag.name,
-          color: tag.color || "#6366f1"
-        })));
-        
-      } catch (err) {
-        console.error("Error fetching tags:", err);
-        setError("Failed to load tags. Please try again.");
-      } finally {
-        setLoadingTags(false);
+  const fetchDonors = useCallback(async () => {
+    try {
+      setLoading(true);
+
+      const response = await axios.get("/api/donor", {
+        params: {
+          page: 1,
+          limit: 100,
+          search: searchTerm,
+          sortBy: sortBy,
+          sortOrder: sortOrder,
+          ...activeFilters,
+        },
+      });
+
+      console.log("API response received, applying client-side filters");
+
+      // Apply client-side filtering
+      let filteredResults = response.data.donors;
+
+      // Add more filters as needed
+      if (activeFilters.tag) {
+        console.log("Applying tag filter:", activeFilters.tag);
+        filteredResults = filteredResults.filter(
+          (donor) =>
+            donor.tags &&
+            donor.tags.some(
+              (tag) =>
+                tag.id === activeFilters.tag || tag.name === activeFilters.tag
+            )
+        );
       }
-    };
-    
-    fetchTags();
+
+      setFilteredDonors(filteredResults);
+      setAvailableFilters(response.data.filters || {});
+    } catch (error) {
+      console.error("Error fetching donors:", error);
+      setError("Failed to fetch donors");
+    } finally {
+      setLoading(false);
+    }
+  }, [searchTerm, activeFilters, sortBy, sortOrder]);
+
+  useEffect(() => {
+    if (currentStep === 2) {
+      fetchDonors();
+    }
+  }, [fetchDonors, currentStep]);
+
+  const handleFilterChange = useCallback((newFilters) => {
+    console.log("Filters changed to:", newFilters);
+    setActiveFilters(newFilters);
   }, []);
 
-  // 当搜索查询变化时过滤捐赠者
-  useEffect(() => {
-    if (!searchQuery.trim()) {
-      return;
-    }
-    
-    const fetchSearchResults = async () => {
-      try {
-        const res = await fetch(`/api/donor?search=${encodeURIComponent(searchQuery)}&limit=20`, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
-        
-        if (!res.ok) throw new Error("Failed to search donors");
-        
-        const data = await res.json();
-        const donorsWithDetails = data.donors.map(donor => ({
-          value: donor.id,
-          label: donor.organization_name || `${donor.first_name} ${donor.last_name}`,
-          tags: donor.tags?.map(t => t.tag) || [],
-          totalDonation: donor.total_donation_amount || 0,
-          city: donor.city
-        }));
-        setFilteredDonors(donorsWithDetails);
-      } catch (err) {
-        console.error("Error searching donors:", err);
-      }
-    };
-    
-    const debounce = setTimeout(() => {
-      fetchSearchResults();
-    }, 300);
-    
-    return () => clearTimeout(debounce);
-  }, [searchQuery]);
-
-  const handleChange = (e) => {
-    const { id, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [id]: value,
-    }));
-  };
-
-  const handleTagsChange = (selectedTags) => {
-    setFormData((prev) => ({
-      ...prev,
-      tags: selectedTags,
-    }));
-  };
-
-  const handleDonorsChange = (selectedDonors) => {
-    setFormData((prev) => ({
-      ...prev,
-      donors: selectedDonors,
-    }));
-  };
-
-  const handleStatusChange = (status) => {
-    setFormData((prev) => ({
-      ...prev,
-      status,
-    }));
-  };
-
-  const recommendDonors = async () => {
-    setIsRecommending(true);
-    try {
-      const response = await axios.get('/api/donor/recommend', {
-        withCredentials: true,
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-  
-      if (response.data.success) {
-        const formattedDonors = response.data.recommendations.map(donor => ({
-          value: donor.id,
-          label: donor.organization_name || `${donor.first_name} ${donor.last_name}`,
-          city: donor.city,
-          tags: donor.tags?.map(t => t.tag) || [],
-          totalDonation: donor.total_donation_amount || 0,
-        }));
-  
-        setRecommendedDonors(formattedDonors);
-  
-        // 自动将推荐捐赠者添加到已选择列表（避免重复）
-        setFormData(prev => ({
-          ...prev,
-          donors: [
-            ...prev.donors,
-            ...formattedDonors.filter(newDonor => !prev.donors.some(d => d.value === newDonor.value))
-          ],
-          donor_count: prev.donors.length + formattedDonors.filter(newDonor => !prev.donors.some(d => d.value === newDonor.value)).length
-        }));
-      } else {
-        throw new Error('Failed to get recommendations');
-      }
-    } catch (error) {
-      console.error('Error fetching recommendations:', error);
-      setError('Unable to fetch recommendations');
-    } finally {
-      setIsRecommending(false);
-    }
-  };
-  
-
-  const addDonor = (donor) => {
-    if (!formData.donors.some(d => d.value === donor.value)) {
-      const updatedDonors = [...formData.donors, donor];
-      setFormData(prev => ({
-        ...prev,
-        donors: updatedDonors,
-        donor_count: updatedDonors.length
-      }));
-    }
-  };
-
   const removeDonor = (donorId) => {
-    const updatedDonors = formData.donors.filter(d => d.value !== donorId);
-    setFormData(prev => ({
+    setFormData((prev) => {
+      const newDonors = prev.donors.filter((d) => d.id !== donorId);
+      return {
+        ...prev,
+        donors: newDonors,
+        donor_count: newDonors.length,
+      };
+    });
+  };
+
+  const toggleDonor = (donor) => {
+    const isSelected = formData.donors.some((d) => d.id === donor.id);
+    setFormData((prev) => ({
       ...prev,
-      donors: updatedDonors,
-      donor_count: updatedDonors.length
+      donors: isSelected
+        ? prev.donors.filter((d) => d.id !== donor.id)
+        : [...prev.donors, { ...donor, status: "invited" }],
+      donor_count: isSelected ? prev.donors.length - 1 : prev.donors.length + 1,
     }));
+  };
+
+  const handleDonorStatusChange = (donorId, status) => {
+    setFormData((prev) => ({
+      ...prev,
+      donors: prev.donors.map((donor) =>
+        (donor.id || donor.value) === donorId ? { ...donor, status } : donor
+      ),
+    }));
+  };
+
+  // Function to move to the next step
+  const goToNextStep = () => {
+    // Validate first step
+    if (currentStep === 1) {
+      if (!formData.name || !formData.date || !formData.location) {
+        toast({
+          title: "Missing information",
+          description: "Please fill in all required fields",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+    setCurrentStep(2);
+  };
+
+  // Function to go back to the previous step
+  const goToPreviousStep = () => {
+    setCurrentStep(1);
+  };
+
+  // Function to clear all filters
+  const clearAllFilters = () => {
+    setActiveFilters({});
+    setSearchTerm("");
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError("");
-
     try {
-      if (!formData.name) {
-        throw new Error("Event name is required");
-      }
-
+      // Format the donor data correctly for the API
       const eventData = {
-        name: formData.name,
-        description: formData.description,
-        date: formData.date,
-        location: formData.location,
-        status: formData.status,
-        donor_count: formData.donors.length,
-        tagIds: formData.tags.map(tag => tag.value),
-        donors: formData.donors.map(donor => ({
-          donorId: donor.value,
-          status: "invited"
-        }))
+        ...formData,
+        donors: formData.donors.map((donor) => ({
+          donorId: donor.id,
+          status: donor.status || "invited",
+        })),
       };
 
-      const res = await fetch("/api/event", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(eventData),
-      });
+      console.log("Submitting event data:", eventData);
 
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.message || "Failed to create event");
+      const res = await axios.post("/api/event", eventData);
+      if (res.status === 200 || res.status === 201) {
+        toast({ title: "Success", description: "Event created successfully!" });
+        navigate("/events");
       }
-
-      toast({
-        title: "Success",
-        description: "Event created successfully!",
-      });
-
-      navigate("/events");
     } catch (err) {
       console.error("Error creating event:", err);
-      setError(err.message);
+
+      // Check for unique constraint error on event name
+      if (
+        err.response?.data?.message?.includes(
+          "Unique constraint failed on the constraint: `Event_name_key`"
+        )
+      ) {
+        const errorMessage =
+          "An event with this name already exists. Please choose a different name.";
+        setError(errorMessage);
+        toast({
+          title: "Duplicate Event Name",
+          description: errorMessage,
+          variant: "destructive",
+        });
+      } else {
+        // Handle other errors
+        const errorMessage =
+          err.response?.data?.message || "Failed to create event";
+        setError(errorMessage);
+        toast({
+          title: "Error",
+          description: errorMessage,
+          variant: "destructive",
+        });
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  return (
-    <div className="container mx-auto py-6">
-      <h1 className="text-2xl font-bold mb-6">Create New Event</h1>
-      
-      <form onSubmit={handleSubmit}>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* 左侧：基本信息 */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Event Details</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid gap-2">
-                <Label htmlFor="name">Event Name *</Label>
-                <Input id="name" value={formData.name} onChange={handleChange} required />
-              </div>
-              
-              <div className="grid gap-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea 
-                  id="description" 
-                  value={formData.description} 
-                  onChange={handleChange} 
-                  className="min-h-[120px]"
-                />
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="date">Date</Label>
-                  <Input id="date" type="date" value={formData.date} onChange={handleChange} />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="location">Location</Label>
-                  <Input id="location" value={formData.location} onChange={handleChange} />
-                </div>
-              </div>
-              
-              <div className="grid gap-2">
-                <Label htmlFor="status">Status</Label>
-                <Select 
-                  id="status" 
-                  value={formData.status} 
-                  onValueChange={handleStatusChange}
+  const recommendDonors = async () => {
+    if (!targetDonorCount || targetDonorCount <= 0) {
+      toast({
+        title: "Invalid number",
+        description: "Please enter a valid number of donors to recommend",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setShowDonors(true); // Show donors after recommendation
+
+      // Get top donors based on donation amount and sort them
+      const topDonors = filteredDonors
+        .sort(
+          (a, b) =>
+            (b.total_donation_amount || 0) - (a.total_donation_amount || 0)
+        )
+        .slice(0, targetDonorCount);
+
+      // Just update the filtered donors list, don't add to selection
+      setFilteredDonors(topDonors);
+
+      toast({
+        title: "Donors recommended",
+        description: `Showing top ${topDonors.length} donors based on donation amount`,
+      });
+    } catch (error) {
+      console.error("Error recommending donors:", error);
+      toast({
+        title: "Error",
+        description: "Failed to recommend donors",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // First, add the addAllDonors function
+  const addAllDonors = () => {
+    if (!showDonors || filteredDonors.length === 0) {
+      toast({
+        title: "No donors to add",
+        description: "Please recommend donors first",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setFormData((prev) => ({
+      ...prev,
+      donors: filteredDonors.map((donor) => ({ ...donor, status: "invited" })),
+      donor_count: filteredDonors.length,
+    }));
+
+    toast({
+      title: "All donors added",
+      description: `Added ${filteredDonors.length} donors to your event`,
+    });
+  };
+
+  // Then add the clearAllDonors function
+  const clearAllDonors = () => {
+    setFormData((prev) => ({
+      ...prev,
+      donors: [],
+      donor_count: 0,
+    }));
+
+    toast({
+      title: "Donors cleared",
+      description: "All donors have been removed from your event",
+    });
+  };
+
+  // Step 1: Event Details Form
+  const renderStepOne = () => (
+    <div className="max-w-xl mx-auto">
+      <Card>
+        <CardHeader>
+          <CardTitle>Event Details</CardTitle>
+          <CardDescription>
+            Step 1 of 2: Enter basic event information
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Label htmlFor="name">Name *</Label>
+          <Input
+            id="name"
+            value={formData.name}
+            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            required
+          />
+
+          <Label htmlFor="description">Description</Label>
+          <Textarea
+            id="description"
+            value={formData.description}
+            onChange={(e) =>
+              setFormData({ ...formData, description: e.target.value })
+            }
+          />
+
+          <Label htmlFor="date">Date *</Label>
+          <Input
+            type="date"
+            id="date"
+            value={formData.date}
+            onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+            required
+          />
+
+          <Label htmlFor="location">Location *</Label>
+          <Input
+            id="location"
+            value={formData.location}
+            onChange={(e) =>
+              setFormData({ ...formData, location: e.target.value })
+            }
+            required
+          />
+
+          <Label>Status</Label>
+          <Select
+            value={formData.status}
+            onValueChange={(val) => setFormData({ ...formData, status: val })}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="draft">Draft</SelectItem>
+              <SelectItem value="published">Published</SelectItem>
+              <SelectItem value="archived">Archived</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Button type="button" className="w-full" onClick={goToNextStep}>
+            Continue to Donor Selection
+          </Button>
+        </CardContent>
+      </Card>
+    </div>
+  );
+
+  // Step 2: Donor Selection
+  const renderStepTwo = () => (
+    <>
+      <Card className="mb-6">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle className="mb-1">Donor Selection</CardTitle>
+            <CardDescription>
+              Step 2 of 2: Select donors for your event
+            </CardDescription>
+          </div>
+          <div className="flex space-x-4">
+            <Button type="button" variant="outline" onClick={goToPreviousStep}>
+              Back to Event Details
+            </Button>
+            <Button type="button" onClick={handleSubmit} disabled={loading}>
+              {loading ? "Creating..." : "Create Event"}
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
+        </CardContent>
+      </Card>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Add Donors</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="mb-4">
+              <Input
+                placeholder="Search donors..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+            <DonorFilters
+              onFilterChange={handleFilterChange}
+              availableFilters={availableFilters}
+            />
+
+            <div className="flex items-end gap-2 my-4">
+              <div className="flex-1">
+                <Label
+                  htmlFor="donorCount"
+                  className="mb-2 block whitespace-nowrap"
                 >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="draft">Draft</SelectItem>
-                    <SelectItem value="published">Published</SelectItem>
-                    <SelectItem value="archived">Archived</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="grid gap-2">
-                <Label htmlFor="tags">Tags</Label>
-                <MultiSelect
-                  id="tags"
-                  isLoading={loadingTags}
-                  options={tags}
-                  value={formData.tags}
-                  onChange={handleTagsChange}
-                  placeholder="Select tags..."
+                  Target Number of Donors to Include
+                </Label>
+                <Input
+                  id="donorCount"
+                  type="number"
+                  min="0"
+                  value={targetDonorCount === null ? "" : targetDonorCount}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value === "") {
+                      setTargetDonorCount(null);
+                    } else {
+                      setTargetDonorCount(parseInt(value) || 0);
+                    }
+                  }}
                 />
               </div>
-              
-              <div className="pt-4">
-                <Button type="submit" disabled={loading} className="w-full">
-                  {loading ? "Creating..." : "Create Event"}
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  onClick={recommendDonors}
+                  disabled={!targetDonorCount || targetDonorCount <= 0}
+                >
+                  Recommend Donors
                 </Button>
-                {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={addAllDonors}
+                  disabled={!showDonors || filteredDonors.length === 0}
+                >
+                  Add All
+                </Button>
               </div>
-            </CardContent>
-          </Card>
-          
-          {/* 右侧：捐赠者选择 */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Donor Selection</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="targetDonorCount">Target Number of Donors</Label>
-                  <Input 
-                    id="targetDonorCount" 
-                    type="number" 
-                    min="1"
-                    value={targetDonorCount} 
-                    onChange={(e) => setTargetDonorCount(parseInt(e.target.value) || 10)} 
-                  />
-                </div>
-                <div className="flex items-end">
-                  <Button 
-                    type="button" 
-                    onClick={recommendDonors} 
-                    disabled={isRecommending}
-                    className="w-full"
-                  >
-                    {isRecommending ? "Recommending..." : "Recommend Donors"}
-                  </Button>
-                </div>
+            </div>
+
+            {showDonors && (
+              <div className="mt-4">
+                <DonorSelection
+                  donors={filteredDonors}
+                  selectedDonors={formData.donors}
+                  onToggle={toggleDonor}
+                />
               </div>
-              
-              <div className="text-sm text-muted-foreground mb-2">
-                Selected donors: {formData.donors.length}
-              </div>
-              
-              <Tabs defaultValue="selected" className="w-full">
-                <TabsList className="grid grid-cols-2 mb-4">
-                  <TabsTrigger value="selected">Selected</TabsTrigger>
-                  <TabsTrigger value="search">Search</TabsTrigger>
-                </TabsList>
-                
-                <TabsContent value="selected" className="space-y-4">
-                  {formData.donors.length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground">
-                      No donors selected. Use the recommend button or search to add donors.
-                    </div>
-                  ) : (
-                    <ScrollArea className="h-[400px] border rounded-md p-2">
-                      <div className="space-y-2">
-                        {formData.donors.map(donor => (
-                          <div key={donor.value} className="flex items-center justify-between p-2 border rounded-md">
-                            <div className="flex-1">
-                              <div className="font-medium">{donor.label}</div>
-                              <div className="text-sm text-muted-foreground">
-                                {donor.city && <span className="mr-2">{donor.city}</span>}
-                                {donor.totalDonation > 0 && <span>${donor.totalDonation.toLocaleString()}</span>}
-                              </div>
-                              {donor.tags && donor.tags.length > 0 && (
-                                <div className="flex flex-wrap gap-1 mt-1">
-                                  {donor.tags.slice(0, 3).map(tag => (
-                                    <Badge 
-                                      key={tag.id} 
-                                      className="text-xs"
-                                      style={{ 
-                                        backgroundColor: tag.color ? `${tag.color}20` : undefined,
-                                        borderColor: tag.color,
-                                        color: tag.color
-                                      }}
-                                    >
-                                      <span 
-                                        className="h-2 w-2 rounded-full mr-1" 
-                                        style={{ backgroundColor: tag.color }}
-                                      />
-                                      {tag.name}
-                                    </Badge>
-                                  ))}
-                                  {donor.tags.length > 3 && (
-                                    <Badge variant="outline" className="text-xs">+{donor.tags.length - 3}</Badge>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              onClick={() => removeDonor(donor.value)}
-                              className="text-red-500"
-                            >
-                              <UserMinus className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
-                    </ScrollArea>
-                  )}
-                </TabsContent>
-                
-                <TabsContent value="search">
-                  <div className="space-y-4">
-                    <div className="relative">
-                      <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        placeholder="Search donors..."
-                        className="pl-8"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                      />
-                    </div>
-                    
-                    <ScrollArea className="h-[400px] border rounded-md p-2">
-                      {filteredDonors.length === 0 ? (
-                        <div className="text-center py-8 text-muted-foreground">
-                          {searchQuery ? "No donors found matching your search." : "Type to search for donors."}
-                        </div>
-                      ) : (
-                        <div className="space-y-2">
-                          {filteredDonors.map(donor => {
-                            const isSelected = formData.donors.some(d => d.value === donor.value);
-                            return (
-                              <div key={donor.value} className="flex items-center justify-between p-2 border rounded-md">
-                                <div className="flex-1">
-                                  <div className="font-medium">{donor.label}</div>
-                                  <div className="text-sm text-muted-foreground">
-                                    {donor.city && <span className="mr-2">{donor.city}</span>}
-                                    {donor.totalDonation > 0 && <span>${donor.totalDonation.toLocaleString()}</span>}
-                                  </div>
-                                  {donor.tags && donor.tags.length > 0 && (
-                                    <div className="flex flex-wrap gap-1 mt-1">
-                                      {donor.tags.slice(0, 3).map(tag => (
-                                        <Badge 
-                                          key={tag.id} 
-                                          className="text-xs"
-                                          style={{ 
-                                            backgroundColor: tag.color ? `${tag.color}20` : undefined,
-                                            borderColor: tag.color,
-                                            color: tag.color
-                                          }}
-                                        >
-                                          <span 
-                                            className="h-2 w-2 rounded-full mr-1" 
-                                            style={{ backgroundColor: tag.color }}
-                                          />
-                                          {tag.name}
-                                        </Badge>
-                                      ))}
-                                      {donor.tags.length > 3 && (
-                                        <Badge variant="outline" className="text-xs">+{donor.tags.length - 3}</Badge>
-                                      )}
-                                    </div>
-                                  )}
-                                </div>
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm" 
-                                  onClick={() => isSelected ? removeDonor(donor.value) : addDonor(donor)}
-                                  className={isSelected ? "text-red-500" : "text-green-500"}
-                                >
-                                  {isSelected ? <UserMinus className="h-4 w-4" /> : <UserPlus className="h-4 w-4" />}
-                                </Button>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </ScrollArea>
-                  </div>
-                </TabsContent>
-              </Tabs>
-            </CardContent>
-          </Card>
-        </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle className="mb-1">
+                Selected Donors ({formData.donors.length}
+                {targetDonorCount !== null && targetDonorCount > 0
+                  ? `/${targetDonorCount}`
+                  : ""}
+                )
+              </CardTitle>
+              <CardDescription>These donors will be invited</CardDescription>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={clearAllDonors}
+              disabled={formData.donors.length === 0}
+            >
+              Clear All
+            </Button>
+          </CardHeader>
+          <CardContent>
+            <CurrentDonorsList
+              donors={formData.donors}
+              onRemove={removeDonor}
+              onStatusChange={handleDonorStatusChange}
+            />
+          </CardContent>
+        </Card>
+      </div>
+    </>
+  );
+
+  return (
+    <div className="w-full px-4 py-6">
+      <h1 className="text-2xl font-bold mb-6">Create Event</h1>
+      <form onSubmit={(e) => e.preventDefault()} className="space-y-6">
+        {currentStep === 1 ? renderStepOne() : renderStepTwo()}
       </form>
     </div>
   );

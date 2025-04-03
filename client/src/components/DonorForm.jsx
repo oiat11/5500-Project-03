@@ -43,12 +43,10 @@ const DonorForm = ({
                 disabled={readOnly}
               />
             </div>
-            {/* 其他字段... */}
           </div>
         </CardContent>
       </Card>
       
-      {/* 其他卡片... */}
       
       {/* Tags */}
       <Card>

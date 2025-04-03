@@ -9,74 +9,137 @@ const prisma = new PrismaClient();
 export const createDonor = async (req, res, next) => {
   try {
     if (!req.user) {
-      return res.status(401).json({ 
-        success: false,
-        message: 'Unauthorized: Please log in' 
+      return next({
+        statusCode: 401,
+        message: 'Unauthorized: Please log in',
+        isPublic: true,
       });
     }
 
-    console.log('Received data from frontend:', req.body);
+    const {
+      first_name,
+      nick_name,
+      last_name,
+      organization_name,
+      unit_number,
+      street_address,
+      city,
+      total_donation_amount,
+      total_pledge,
+      largest_gift_amount,
+      largest_gift_appeal,
+      last_gift_amount,
+      last_gift_request,
+      last_gift_appeal,
+      first_gift_date,
+      pmm,
+      exclude = false,
+      deceased = false,
+      contact_phone_type,
+      phone_restrictions,
+      email_restrictions,
+      communication_restrictions,
+      subscription_events_in_person,
+      subscription_events_magazine,
+      communication_preference,
+      tagIds = [],
+    } = req.body;
 
-    const donorData = {
-      first_name: req.body.first_name || "",
-      nick_name: req.body.nick_name || "",
-      last_name: req.body.last_name || "",
-      organization_name: req.body.organization_name || "",
-      unit_number: req.body.unit_number || "",
-      street_address: req.body.street_address || "",
-      city: req.body.city || "",
-      total_donation_amount: req.body.total_donation_amount
-        ? new Decimal(parseFloat(req.body.total_donation_amount))
-        : new Decimal(0),
-      total_pledge: req.body.total_pledge
-        ? new Decimal(parseFloat(req.body.total_pledge))
-        : null,
-      largest_gift_amount: req.body.largest_gift_amount
-        ? new Decimal(parseFloat(req.body.largest_gift_amount))
-        : new Decimal(0),
-      largest_gift_appeal: req.body.largest_gift_appeal || "",
-      last_gift_amount: req.body.last_gift_amount
-        ? new Decimal(parseFloat(req.body.last_gift_amount))
-        : null,
-      last_gift_request: req.body.last_gift_request || "",
-      last_gift_appeal: req.body.last_gift_appeal || "",
-      first_gift_date: req.body.first_gift_date
-        ? new Date(req.body.first_gift_date)
-        : null,
-      pmm: req.body.pmm || "",
-      exclude: req.body.exclude || false,
-      deceased: req.body.deceased || false,
-      contact_phone_type: req.body.contact_phone_type || ContactPhoneType.MOBILE,
-      phone_restrictions: req.body.phone_restrictions || "",
-      email_restrictions: req.body.email_restrictions || "",
-      communication_restrictions: req.body.communication_restrictions || "",
-      subscription_events_in_person: req.body.subscription_events_in_person || SubscriptionPreference.OPT_IN,
-      subscription_events_magazine: req.body.subscription_events_magazine || SubscriptionPreference.OPT_IN,
-      communication_preference: req.body.communication_preference || CommunicationPreference.THANK_YOU
+    if (!pmm) {
+      return next({
+        statusCode: 400,
+        message: 'PMM is required',
+        isPublic: true,
+      });
+    }
+
+    const safeEnum = (value, fallback) => {
+      return typeof value === 'string' && value.trim() !== '' ? value : fallback;
     };
 
-
-    console.log('Processed donor data:', donorData);
-
-    const newDonor = await prisma.donor.create({
-      data: donorData
+    const existingDonor = await prisma.donor.findFirst({
+      where: {
+        first_name,
+        last_name,
+        organization_name,
+        street_address,
+      },
     });
 
-    console.log('Created donor result:', newDonor);
+    if (existingDonor) {
+      return next({
+        statusCode: 409,
+        message: 'Donor already exists with the same name and address.',
+        isPublic: true,
+      });
+    }
+
+    //Create the donor
+    const newDonor = await prisma.donor.create({
+      data: {
+        first_name,
+        nick_name,
+        last_name,
+        organization_name,
+        unit_number,
+        street_address,
+        city,
+        total_donation_amount: total_donation_amount ?? 0,
+        total_pledge,
+        largest_gift_amount,
+        largest_gift_appeal: largest_gift_appeal || null,
+        last_gift_amount,
+        last_gift_request: last_gift_request || null,
+        last_gift_appeal: last_gift_appeal || null,
+        first_gift_date,
+        pmm,
+        exclude,
+        deceased,
+        contact_phone_type: safeEnum(contact_phone_type, 'Mobile'),
+        phone_restrictions: phone_restrictions || null,
+        email_restrictions: email_restrictions || null,
+        communication_restrictions: communication_restrictions || null,
+        subscription_events_in_person: safeEnum(subscription_events_in_person, 'Opt_in'),
+        subscription_events_magazine: safeEnum(subscription_events_magazine, 'Opt_in'),
+        communication_preference: safeEnum(communication_preference, 'Thank_you'),
+      },
+    });
+
+    //Create donor-tag relations manually
+    if (tagIds.length > 0) {
+      await prisma.donorTag.createMany({
+        data: tagIds.map((tagId) => ({
+          donor_id: newDonor.id,
+          tag_id: tagId,
+        })),
+        skipDuplicates: true,
+      });
+    }
+
+    //Fetch donor again including tags
+    const donorWithTags = await prisma.donor.findUnique({
+      where: { id: newDonor.id },
+      include: {
+        tags: { include: { tag: true } },
+      },
+    });
+
     return res.status(201).json({
       success: true,
       message: 'Donor created successfully',
-      donor: newDonor
+      donor: donorWithTags,
     });
   } catch (error) {
     console.error('Error creating donor:', error);
     return res.status(500).json({
       success: false,
       message: 'Failed to create donor',
-      error: error.message
+      error: error.message,
     });
   }
 };
+
+
 
 // function to get all donors
 export const getAllDonors = async (req, res) => {
@@ -120,6 +183,7 @@ export const getDonors = async (req, res, next) => {
   try {
     if (!req.user) return next(errorHandler(401, 'Unauthorized: Please log in'));
 
+
     const {
       search,
       page = 1,
@@ -137,6 +201,8 @@ export const getDonors = async (req, res, next) => {
       emailRestrictions,
       communicationRestrictions
     } = req.query;
+    console.log("Received filters:", req.query);
+    console.log("City:", req.query.city);
 
     const pageNum = parseInt(page);
     const limitNum = parseInt(limit);
@@ -250,7 +316,6 @@ export const getDonors = async (req, res, next) => {
       skip,
       take: limitNum
     });
-
     res.status(200).json({
       donors,
       pagination: {
@@ -559,13 +624,30 @@ export const recommendDonors = async (req, res) => {
         created_at: 'desc'
       }
     });
-
-    console.log('Found recommendations:', recommendations);
-
-    return res.status(200).json({
-      success: true,
-      recommendations
+    
+    const scoredDonors = donorsWithTags.map(donor => {
+      const matchingTagCount = donor.tags.filter(t => 
+        tagIds.includes(t.tag_id)
+      ).length;
+      
+      return {
+        donor,
+        score: matchingTagCount + (donor.total_donation_amount / 10000 || 0)
+      };
     });
+    
+    const recommendedDonors = scoredDonors
+      .sort((a, b) => b.score - a.score)
+      .slice(0, count)
+      .map(item => ({
+        value: item.donor.id,
+        label: item.donor.organization_name || `${item.donor.first_name} ${item.donor.last_name}`,
+        tags: item.donor.tags.map(t => t.tag),
+        totalDonation: item.donor.total_donation_amount || 0,
+        city: item.donor.city
+      }));
+    
+    res.status(200).json({ donors: recommendedDonors });
   } catch (error) {
     console.error('Error in recommendDonors:', error);
     return res.status(500).json({

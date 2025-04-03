@@ -12,6 +12,7 @@ import PrivateRoute from './components/PrivateRoute'
 import Settings from './pages/Settings'
 import CreateEvent from './pages/CreateEvent'
 import DonorDetails from './pages/DonorDetails'
+import EventDetails from './pages/EventDetails'
 
 function App() {
   return (
@@ -30,7 +31,7 @@ function App() {
                 <AppSidebar />
                 <main className="flex-1">
                   <SidebarTrigger />
-                  <div className="p-8">
+                  <div className=" px-6 py-8">
                     <Outlet />
                   </div>
                 </main>
@@ -42,6 +43,7 @@ function App() {
             <Route path="/donors/create" element={<CreateDonor />} />
             <Route path="/events" element={<Events />} />
             <Route path="/events/create" element={<CreateEvent />} />
+            <Route path="/events/:id" element={<EventDetails />} />
             <Route path="/settings" element={<Settings />} />
           </Route>
         </Route>
