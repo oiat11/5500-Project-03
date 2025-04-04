@@ -67,7 +67,7 @@ export default function Donors() {
         search,
         sortBy: sorting.column,
         sortOrder: sorting.direction,
-        includeFields: 'total_donations,largest_gift_appeal,city,contact_phone_type,phone_restrictions,email_restrictions,communication_restrictions'
+        includeFields: 'total_donations,largest_gift_appeal,city,contact_phone_type,phone_restrictions,email_restrictions,communication_restrictions,tags'
       };
       
       // Add other parameters for filtering..
@@ -401,27 +401,30 @@ export default function Donors() {
                   <TableHead className="w-[12%]">
                     Contact Phone Type
                   </TableHead>
-                  <TableHead className="w-[12%]">
+                  <TableHead className="w-[10%]">
                     Phone Restrictions
                   </TableHead>
-                  <TableHead className="w-[12%]">
+                  <TableHead className="w-[10%]">
                     Email Restrictions
                   </TableHead>
-                  <TableHead className="w-[12%]">
+                  <TableHead className="w-[10%]">
                     Communication Restrictions
+                  </TableHead>
+                  <TableHead className="w-[11%]">
+                    Tags
                   </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-8">
+                    <TableCell colSpan={10} className="text-center py-8">
                       Loading donors...
                     </TableCell>
                   </TableRow>
                 ) : donors.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-8">
+                    <TableCell colSpan={10} className="text-center py-8">
                       No donors found. Please start by adding donors manually or importing from a CSV file. If you have already imported donors, please adjust the filters or search bar.
                     </TableCell>
                   </TableRow>
@@ -474,6 +477,11 @@ export default function Donors() {
                       </TableCell>
                       <TableCell className="truncate max-w-[150px]" title={donor.communication_restrictions || "None"}>
                         {donor.communication_restrictions || "None"}
+                      </TableCell>
+                      <TableCell className="truncate max-w-[150px]">
+                        {donor.tags && donor.tags.length > 0 
+                          ? donor.tags.map(t => t.tag?.name || t.name).join(', ')
+                          : "None"}
                       </TableCell>
                     </TableRow>
                   ))
