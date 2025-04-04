@@ -110,8 +110,11 @@ export default function CreateEvent() {
   }, []);
 
   const removeDonor = (donorId) => {
+    // If donorId is actually a donor object, extract the ID
+    const id = typeof donorId === 'object' ? (donorId.id || donorId.value) : donorId;
+    
     setFormData((prev) => {
-      const newDonors = prev.donors.filter((d) => d.id !== donorId);
+      const newDonors = prev.donors.filter((d) => (d.id || d.value) !== id);
       return {
         ...prev,
         donors: newDonors,
