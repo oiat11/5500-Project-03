@@ -2,6 +2,7 @@ import React, { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import axios from "axios";
 import { useToast } from "@/components/ui/toast";
+import { FileText } from "lucide-react";
 
 export default function DonorImportCsv({ onSuccess }) {
   const fileInputRef = useRef(null);
@@ -78,7 +79,8 @@ export default function DonorImportCsv({ onSuccess }) {
         onClick={() => fileInputRef.current?.click()}
         disabled={uploading}
       >
-        {uploading ? "Uploading..." : "Import Donors with CSV"}
+        <FileText className="mr-2 h-4 w-4" />
+        {uploading ? "Uploading..." : "Import CSV"}
       </Button>
     </>
   );
