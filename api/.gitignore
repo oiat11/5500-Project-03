@@ -1,5 +1,5 @@
 node_modules
 # Keep environment variables out of version control
 .env
-api/prisma/seed_data.json
-api/prisma/seed.js
+prisma/seed_data.json
+prisma/seed.js
