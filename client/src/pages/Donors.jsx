@@ -130,6 +130,12 @@ export default function Donors() {
     debouncedSearch(value);
   };
 
+  // Add a clear search function
+  const handleClearSearch = () => {
+    setSearchTerm('');
+    fetchDonors(1, '', activeFilters);
+  };
+
   // Handle page change
   const handlePageChange = (newPage) => {
     if (newPage > 0 && newPage <= pagination.totalPages) {
@@ -313,12 +319,21 @@ export default function Donors() {
                 className="w-full"
               />
             </div>
-            <Button
-              variant="outline"
-              onClick={() => fetchDonors(1, searchTerm, activeFilters)}
-            >
-              Search
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => fetchDonors(1, searchTerm, activeFilters)}
+              >
+                Search
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleClearSearch}
+                disabled={!searchTerm}
+              >
+                Clear
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
