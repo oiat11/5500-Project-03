@@ -80,7 +80,7 @@ export default function DonorImportCsv({ onSuccess }) {
         disabled={uploading}
       >
         <FileText className="mr-2 h-4 w-4" />
-        {uploading ? "Uploading..." : "Import CSV"}
+        {uploading ? "Uploading..." : "Import Donor List CSV"}
       </Button>
     </>
   );
