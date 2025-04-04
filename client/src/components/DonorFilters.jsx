@@ -17,7 +17,6 @@ const DonorFilters = ({ onFilterChange, availableFilters = {} }) => {
     contactPhoneType: '',
     phoneRestrictions: '',
     emailRestrictions: '',
-    communicationRestrictions: '',
     tags: [],
     tagSearch: ''
   });
@@ -147,7 +146,6 @@ const DonorFilters = ({ onFilterChange, availableFilters = {} }) => {
       contactPhoneType: filters.contactPhoneType || undefined,
       phoneRestrictions: filters.phoneRestrictions || undefined,
       emailRestrictions: filters.emailRestrictions || undefined,
-      communicationRestrictions: filters.communicationRestrictions || undefined,
       minDonationAmount: filters.minDonationAmount || undefined,
       maxDonationAmount: filters.maxDonationAmount || undefined,
     };
@@ -172,7 +170,6 @@ const DonorFilters = ({ onFilterChange, availableFilters = {} }) => {
       contactPhoneType: '',
       phoneRestrictions: '',
       emailRestrictions: '',
-      communicationRestrictions: '',
       tags: [],
       tagSearch: ''
     });
@@ -208,14 +205,6 @@ const DonorFilters = ({ onFilterChange, availableFilters = {} }) => {
     { value: 'No Mass Communications', label: 'No Mass Communications' },
     { value: 'No Surveys', label: 'No Surveys' },
     { value: 'No Mass Appeals', label: 'No Mass Appeals' }
-  ];
-
-  const communicationRestrictionsOptions = [
-    { value: '', label: 'Select a restriction...' },
-    { value: 'None', label: 'None' },
-    { value: 'No Surveys', label: 'No Surveys' },
-    { value: 'No Mass Appeals', label: 'No Mass Appeals' },
-    { value: 'No Mass Communications', label: 'No Mass Communications' }
   ];
 
   return (
@@ -460,31 +449,6 @@ const DonorFilters = ({ onFilterChange, availableFilters = {} }) => {
                       Clear
                     </Button>
                   </div>
-                </div>
-              </div>
-
-              {/* Communication Restrictions Filter */}
-              <div>
-                <Label htmlFor="communicationRestrictions" className="mb-1">Communication Restrictions</Label>
-                <div className="flex gap-2">
-                  <select
-                    id="communicationRestrictions"
-                    name="communicationRestrictions"
-                    value={filters.communicationRestrictions}
-                    onChange={handleSelectChange}
-                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {communicationRestrictionsOptions.map(option => (
-                      <option key={option.value} value={option.value}>{option.label}</option>
-                    ))}
-                  </select>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleClearFilter('communicationRestrictions')}
-                  >
-                    Clear
-                  </Button>
                 </div>
               </div>
             </div>

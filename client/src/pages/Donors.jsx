@@ -17,7 +17,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ChevronDown, ChevronUp, MoreHorizontal } from "lucide-react";
+import { ChevronDown, ChevronUp, MoreHorizontal, UserPlus, FileText } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -67,7 +67,7 @@ export default function Donors() {
         search,
         sortBy: sorting.column,
         sortOrder: sorting.direction,
-        includeFields: 'total_donations,largest_gift_appeal,city,contact_phone_type,phone_restrictions,email_restrictions,communication_restrictions'
+        includeFields: 'total_donations,largest_gift_appeal,city,contact_phone_type,phone_restrictions,email_restrictions,tags'
       };
       
       // Add other parameters for filtering..
@@ -83,8 +83,6 @@ export default function Donors() {
         params.phoneRestrictions = filters.phoneRestrictions;
       if (filters.emailRestrictions)
         params.emailRestrictions = filters.emailRestrictions;
-      if (filters.communicationRestrictions)
-        params.communicationRestrictions = filters.communicationRestrictions;
       
 
       if (filters.city) {
@@ -130,6 +128,12 @@ export default function Donors() {
     const value = e.target.value;
     setSearchTerm(value);
     debouncedSearch(value);
+  };
+
+  // Add a clear search function
+  const handleClearSearch = () => {
+    setSearchTerm('');
+    fetchDonors(1, '', activeFilters);
   };
 
   // Handle page change
@@ -298,6 +302,7 @@ export default function Donors() {
               fetchDonors(1, '', {});
             }} />
           <Button onClick={() => navigate("/donors/create")}>
+            <UserPlus className="mr-2 h-4 w-4" />
             Add Donor Manually
           </Button>
         </div>
@@ -314,12 +319,21 @@ export default function Donors() {
                 className="w-full"
               />
             </div>
-            <Button
-              variant="outline"
-              onClick={() => fetchDonors(1, searchTerm, activeFilters)}
-            >
-              Search
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => fetchDonors(1, searchTerm, activeFilters)}
+              >
+                Search
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleClearSearch}
+                disabled={!searchTerm}
+              >
+                Clear
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -400,14 +414,14 @@ export default function Donors() {
                   <TableHead className="w-[12%]">
                     Contact Phone Type
                   </TableHead>
-                  <TableHead className="w-[12%]">
+                  <TableHead className="w-[10%]">
                     Phone Restrictions
                   </TableHead>
-                  <TableHead className="w-[12%]">
+                  <TableHead className="w-[10%]">
                     Email Restrictions
                   </TableHead>
-                  <TableHead className="w-[12%]">
-                    Communication Restrictions
+                  <TableHead className="w-[21%]">
+                    Tags
                   </TableHead>
                 </TableRow>
               </TableHeader>
@@ -421,7 +435,7 @@ export default function Donors() {
                 ) : donors.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={9} className="text-center py-8">
-                      No donors found.
+                      No donors found. Please start by adding donors manually or importing from a CSV file. If you have already imported donors, please adjust the filters or search bar.
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -471,8 +485,10 @@ export default function Donors() {
                       <TableCell className="truncate max-w-[150px]" title={donor.email_restrictions || "None"}>
                         {donor.email_restrictions || "None"}
                       </TableCell>
-                      <TableCell className="truncate max-w-[150px]" title={donor.communication_restrictions || "None"}>
-                        {donor.communication_restrictions || "None"}
+                      <TableCell className="truncate max-w-[150px]">
+                        {donor.tags && donor.tags.length > 0 
+                          ? donor.tags.map(t => t.tag?.name || t.name).join(', ')
+                          : "None"}
                       </TableCell>
                     </TableRow>
                   ))

@@ -56,7 +56,7 @@ export default function Events() {
       ) : events.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center h-64">
-            <p className="text-muted-foreground mb-4">No events found</p>
+            <p className="text-muted-foreground mb-4">No events found. Please create your first event below.</p>
             <Button onClick={() => navigate("/events/create")}>Create Your First Event</Button>
           </CardContent>
         </Card>
