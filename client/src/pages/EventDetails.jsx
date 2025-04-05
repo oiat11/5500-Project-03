@@ -312,6 +312,18 @@ export default function EventDetails() {
     }
   };
 
+  if (loading) {
+    return (
+      <div className="container max-w-7xl mx-auto py-8 px-4">
+        <div className="flex justify-center items-center h-64">
+          <div className="text-center">
+            <p className="text-xl mb-4">Loading event details...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (error || !event) {
     return (
       <div className="container max-w-7xl mx-auto py-8 px-4">
@@ -361,7 +373,7 @@ export default function EventDetails() {
           </div>
         </div>
 
-        {/* 添加事件名称标题 */}
+ 
         <h1 className="text-3xl font-bold mb-6">{event.name}</h1>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -502,8 +514,37 @@ export default function EventDetails() {
                               className="font-medium cursor-pointer"
                               onClick={() => navigate(`/donors/${donorEvent.donor_id}`)}
                             >
-                              {donorEvent.donor.organization_name ||
-                                `${donorEvent.donor.first_name} ${donorEvent.donor.last_name}`}
+                              {donorEvent.donor.organization_name || 
+                               `${donorEvent.donor.first_name} ${donorEvent.donor.last_name}`}
+                              
+                              {/* Add debugging to check the structure */}
+                              {console.log("Donor tags:", donorEvent.donor.tags)}
+                              
+                              {/* Check for tags with more flexible conditions */}
+                              {(donorEvent.donor.tags && donorEvent.donor.tags.length > 0) && (
+                                <div className="flex flex-wrap gap-1 mt-1">
+                                  {donorEvent.donor.tags.map((tagItem, index) => {
+                                    // Handle different possible tag structures
+                                    const tag = tagItem.tag || tagItem;
+                                    const tagId = tag.id || tagItem.tag_id || index;
+                                    const tagName = tag.name || '';
+                                    const tagColor = tag.color || '#6366f1';
+                                    
+                                    return (
+                                      <div
+                                        key={tagId}
+                                        className="px-2 py-0.5 rounded-full text-xs font-medium"
+                                        style={{
+                                          backgroundColor: tagColor,
+                                          color: getContrastColor(tagColor),
+                                        }}
+                                      >
+                                        {tagName}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              )}
                             </TableCell>
                             <TableCell onClick={(e) => e.stopPropagation()}>
                               <Select
@@ -769,4 +810,23 @@ export default function EventDetails() {
 
     
   );
+}
+
+// Helper function to determine text color based on background color
+function getContrastColor(hexColor) {
+  if (!hexColor) return '#000000';
+  
+  // Remove the # if it exists
+  hexColor = hexColor.replace('#', '');
+  
+  // Convert to RGB
+  const r = parseInt(hexColor.substr(0, 2), 16);
+  const g = parseInt(hexColor.substr(2, 2), 16);
+  const b = parseInt(hexColor.substr(4, 2), 16);
+  
+  // Calculate brightness (YIQ formula)
+  const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+  
+  // Return black or white depending on brightness
+  return yiq >= 128 ? '#000000' : '#ffffff';
 } 

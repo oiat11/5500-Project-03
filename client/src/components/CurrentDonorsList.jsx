@@ -73,7 +73,7 @@ export default function CurrentDonorsList({ donors, onStatusChange, onRemove }) 
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={() => onRemove(donor)}
+                      onClick={() => onRemove(donor.id || donor.value)}
                     >
                       <UserMinus className="h-4 w-4" />
                     </Button>

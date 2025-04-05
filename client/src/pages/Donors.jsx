@@ -486,10 +486,21 @@ export default function Donors() {
                         {donor.email_restrictions || "None"}
                       </TableCell>
                       <TableCell className="truncate max-w-[150px]">
-                        {donor.tags && donor.tags.length > 0 
-                          ? donor.tags.map(t => t.tag?.name || t.name).join(', ')
-                          : "None"}
-                      </TableCell>
+  <div className="flex flex-wrap gap-1">
+    {donor.tags && donor.tags.length > 0 
+      ? donor.tags.map((t, idx) => (
+          <span
+            key={idx}
+            className="text-xs px-2 py-1 rounded-full text-white"
+            style={{ backgroundColor: t.tag?.color || t.color || '#6366f1' }}
+          >
+            {t.tag?.name || t.name}
+          </span>
+        ))
+      : "None"}
+  </div>
+</TableCell>
+
                     </TableRow>
                   ))
                 )}

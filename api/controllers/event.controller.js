@@ -80,11 +80,20 @@ export const getEventById = async (req, res, next) => {
         tags: true,
         donors: {
           include: {
-            donor: true
+            donor: {
+              include: {
+                tags: {
+                  include: {
+                    tag: true
+                  }
+                }
+              }
+            }
           }
         }
       }
     });
+    
 
     if (!event) {
       return res.status(404).json({
