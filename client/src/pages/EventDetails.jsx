@@ -65,60 +65,61 @@ export default function EventDetails() {
     donors: [],
     tags: []
   });
-  const [tags, setTags] = useState([]);
 
   useEffect(() => {
-    const fetchEventDetails = async () => {
-      try {
-        setLoading(true);
-        const response = await fetch(`/api/event/${id}`, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
-
-        if (!response.ok) {
-          throw new Error("Failed to fetch event details");
-        }
-
-        const data = await response.json();
-        setEvent(data.event);
-        setIsEventOwner(data.isEventOwner);
-        
-        setFormData({
-          donors: data.event.donors.map(donorEvent => ({
-            value: donorEvent.donor_id,
-            label: donorEvent.donor.organization_name || 
-                  `${donorEvent.donor.first_name} ${donorEvent.donor.last_name}`,
-            tags: donorEvent.donor.tags?.map(t => t.tag) || [],
-            totalDonation: donorEvent.donor.total_donation_amount || 0,
-            city: donorEvent.donor.city,
-            status: donorEvent.status
-          })),
-          tags: data.event.tags.map(tag => ({
-            value: tag.id,
-            label: tag.name,
-            color: tag.color
-          }))
-        });
-      } catch (err) {
-        console.error("Error fetching event details:", err);
-        setError("Failed to load event details. Please try again.");
-        toast({
-          title: "Error",
-          description: "Failed to load event details",
-          variant: "destructive",
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
-
     if (id) {
       fetchEventDetails();
     }
-  }, [id, toast]);
+  }, [id]);
+  
+
+  const fetchEventDetails = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(`/api/event/${id}`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+  
+      if (!response.ok) {
+        throw new Error("Failed to fetch event details");
+      }
+  
+      const data = await response.json();
+      setEvent(data.event);
+      setIsEventOwner(data.isEventOwner);
+  
+      setFormData({
+        donors: data.event.donors.map(donorEvent => ({
+          value: donorEvent.donor_id,
+          label: donorEvent.donor.organization_name || 
+                `${donorEvent.donor.first_name} ${donorEvent.donor.last_name}`,
+          tags: donorEvent.donor.tags?.map(t => t.tag) || [],
+          totalDonation: donorEvent.donor.total_donation_amount || 0,
+          city: donorEvent.donor.city,
+          status: donorEvent.status
+        })),
+        tags: data.event.tags.map(tag => ({
+          value: tag.id,
+          label: tag.name,
+          color: tag.color
+        }))
+      });
+    } catch (err) {
+      console.error("Error fetching event details:", err);
+      setError("Failed to load event details. Please try again.");
+      toast({
+        title: "Error",
+        description: "Failed to load event details",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+  
 
   const handleDelete = async () => {
     try {
@@ -185,34 +186,6 @@ export default function EventDetails() {
     }
   };
 
-  const getParticipationStatusBadge = (status) => {
-    switch (status) {
-      case "invited":
-        return (
-          <Badge variant="outline" className="bg-blue-100 text-blue-800">
-            Invited
-          </Badge>
-        );
-      case "confirmed":
-        return (
-          <Badge variant="outline" className="bg-green-100 text-green-800">
-            Confirmed
-          </Badge>
-        );
-      case "declined":
-        return (
-          <Badge variant="outline" className="bg-red-100 text-red-800">
-            Declined
-          </Badge>
-        );
-      default:
-        return (
-          <Badge variant="outline" className="bg-gray-100 text-gray-800">
-            {status || "Unknown"}
-          </Badge>
-        );
-    }
-  };
 
   const handleDonorStatusChange = async (donorId, newStatus) => {
     try {
@@ -263,52 +236,6 @@ export default function EventDetails() {
       });
     } finally {
       setSaving(false);
-    }
-  };
-
-  const refreshEventData = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch(`/api/event/${id}`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch event details");
-      }
-
-      const data = await response.json();
-      setEvent(data.event);
-      setIsEventOwner(data.isEventOwner);
-      
-      setFormData({
-        donors: data.event.donors.map(donorEvent => ({
-          value: donorEvent.donor_id,
-          label: donorEvent.donor.organization_name || 
-                `${donorEvent.donor.first_name} ${donorEvent.donor.last_name}`,
-          tags: donorEvent.donor.tags?.map(t => t.tag) || [],
-          totalDonation: donorEvent.donor.total_donation_amount || 0,
-          city: donorEvent.donor.city,
-          status: donorEvent.status
-        })),
-        tags: data.event.tags.map(tag => ({
-          value: tag.id,
-          label: tag.name,
-          color: tag.color
-        }))
-      });
-    } catch (err) {
-      console.error("Error refreshing event details:", err);
-      toast({
-        title: "Error",
-        description: "Failed to refresh event details",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -516,9 +443,6 @@ export default function EventDetails() {
                             >
                               {donorEvent.donor.organization_name || 
                                `${donorEvent.donor.first_name} ${donorEvent.donor.last_name}`}
-                              
-                              {/* Add debugging to check the structure */}
-                              {console.log("Donor tags:", donorEvent.donor.tags)}
                               
                               {/* Check for tags with more flexible conditions */}
                               {(donorEvent.donor.tags && donorEvent.donor.tags.length > 0) && (
@@ -785,7 +709,7 @@ export default function EventDetails() {
         });
         
         // Refresh event data to show the updated donors
-        refreshEventData();
+        fetchEventDetails();
       } catch (error) {
         console.error("Error adding donors to event:", error);
         toast({
