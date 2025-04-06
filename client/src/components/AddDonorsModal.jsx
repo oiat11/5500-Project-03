@@ -39,7 +39,7 @@ export default function AddDonorsModal({
 
   const formattedExistingDonors = existingDonors
     .map(donor => {
-      const name = donor.organization_name || `${donor.first_name} ${donor.last_name}`;
+      const name = `${donor.first_name} ${donor.last_name}`;
       return {
         id: donor.id,
         name: name,
@@ -182,8 +182,8 @@ export default function AddDonorsModal({
 
   const renderDonorsList = () => {
     const formattedSelectedDonors = selectedDonors.map(donor => {
-      const name = donor.organization_name || 
-        (donor.first_name && donor.last_name ? `${donor.first_name} ${donor.last_name}` : donor.name || donor.label || "Unknown");
+      const name = 
+        (donor.first_name && donor.last_name ? `${donor.first_name} ${donor.last_name}` : donor.name || "Unknown");
       return {
         ...donor,
         label: name,

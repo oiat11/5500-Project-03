@@ -94,7 +94,7 @@ export default function EventDetails() {
       setFormData({
         donors: data.event.donors.map(donorEvent => ({
           value: donorEvent.donor_id,
-          label: donorEvent.donor.organization_name || 
+          label: 
                 `${donorEvent.donor.first_name} ${donorEvent.donor.last_name}`,
           tags: donorEvent.donor.tags?.map(t => t.tag) || [],
           totalDonation: donorEvent.donor.total_donation_amount || 0,
@@ -441,7 +441,7 @@ export default function EventDetails() {
                               className="font-medium cursor-pointer"
                               onClick={() => navigate(`/donors/${donorEvent.donor_id}`)}
                             >
-                              {donorEvent.donor.organization_name || 
+                              {
                                `${donorEvent.donor.first_name} ${donorEvent.donor.last_name}`}
                               
                               {/* Check for tags with more flexible conditions */}

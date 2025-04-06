@@ -22,7 +22,7 @@ export default function DonorSelection({ donors, selectedDonors, onToggle }) {
               >
                 <div className="flex-1 min-w-0">
                   <div className="font-medium truncate">
-                    {donor.organization_name || `${donor.first_name} ${donor.last_name}`}
+                    {`${donor.first_name} ${donor.last_name}`}
                   </div>
                   <div className="flex items-center text-sm text-muted-foreground">
                     {donor.city && <span className="mr-2">{donor.city.replace(/_/g, ' ')}</span>}
