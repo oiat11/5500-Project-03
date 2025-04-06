@@ -39,7 +39,7 @@ router.delete('/:id', verifyToken, deleteDonor);
 router.post('/import/csv', verifyToken, upload.single('file'), importDonorsCsv);
 
 // Recommend donors
-router.get('/recommend', recommendDonors);
+router.get('/recommend', verifyToken, recommendDonors);
 
 // Get single donor
 router.get('/:id', verifyToken, getDonorById);

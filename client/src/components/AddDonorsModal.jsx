@@ -13,31 +13,9 @@ import {
 import { useToast } from "@/components/ui/toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
-
 import DonorFilters from "@/components/DonorFilters";
 import CurrentDonorsList from "@/components/CurrentDonorsList";
 import DonorSelection from "@/components/DonorSelection";
-
-// Helper function to determine text color based on background color
-function getContrastColor(hexColor) {
-  if (!hexColor) return '#000000';
-  
-  // Remove the # if it exists
-  hexColor = hexColor.replace('#', '');
-  
-  // Convert to RGB
-  const r = parseInt(hexColor.substr(0, 2), 16);
-  const g = parseInt(hexColor.substr(2, 2), 16);
-  const b = parseInt(hexColor.substr(4, 2), 16);
-  
-  // Calculate brightness (YIQ formula)
-  const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
-  
-  // Return black or white depending on brightness
-  return yiq >= 128 ? '#000000' : '#ffffff';
-}
 
 export default function AddDonorsModal({ 
   isOpen, 
@@ -56,11 +34,9 @@ export default function AddDonorsModal({
   const [filteredDonors, setFilteredDonors] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [sortBy, setSortBy] = useState("total_donation_amount");
-  const [sortOrder, setSortOrder] = useState("desc");
   const [showDonors, setShowDonors] = useState(false);
+  const [hasAddedAll, setHasAddedAll] = useState(false);
 
-  // Format existing donors for display
   const formattedExistingDonors = existingDonors
     .map(donor => {
       const name = donor.organization_name || `${donor.first_name} ${donor.last_name}`;
@@ -78,7 +54,6 @@ export default function AddDonorsModal({
     })
     .filter(donor => !removedExistingDonors.includes(donor.id));
 
-  // Reset state when modal opens
   useEffect(() => {
     if (isOpen) {
       setSelectedDonors([]);
@@ -89,61 +64,6 @@ export default function AddDonorsModal({
       setError("");
     }
   }, [isOpen]);
-
-  const fetchDonors = useCallback(async () => {
-    try {
-      setLoading(true);
-
-      const response = await axios.get("/api/donor", {
-        params: {
-          page: 1,
-          limit: 100,
-          search: searchTerm,
-          sortBy: sortBy,
-          sortOrder: sortOrder,
-          ...activeFilters,
-        },
-      });
-
-      // Apply client-side filtering
-      let filteredResults = response.data.donors;
-
-      // Filter out donors that are already in the event and not removed
-      const existingDonorIds = existingDonors
-        .filter(donor => !removedExistingDonors.includes(donor.id))
-        .map(donor => donor.id);
-      
-      filteredResults = filteredResults.filter(
-        donor => !existingDonorIds.includes(donor.id)
-      );
-
-      // Apply tag filter if needed
-      if (activeFilters.tag) {
-        filteredResults = filteredResults.filter(
-          (donor) =>
-            donor.tags &&
-            donor.tags.some(
-              (tag) =>
-                tag.id === activeFilters.tag || tag.name === activeFilters.tag
-            )
-        );
-      }
-
-      setFilteredDonors(filteredResults);
-      setAvailableFilters(response.data.filters || {});
-    } catch (error) {
-      console.error("Error fetching donors:", error);
-      setError("Failed to fetch donors");
-    } finally {
-      setLoading(false);
-    }
-  }, [searchTerm, activeFilters, sortBy, sortOrder, existingDonors, removedExistingDonors]);
-
-  useEffect(() => {
-    if (isOpen) {
-      fetchDonors();
-    }
-  }, [fetchDonors, isOpen, removedExistingDonors]);
 
   const handleFilterChange = useCallback((newFilters) => {
     setActiveFilters(newFilters);
@@ -187,16 +107,22 @@ export default function AddDonorsModal({
     try {
       setLoading(true);
       setShowDonors(true);
+      setHasAddedAll(false);
 
-      // Get top donors based on donation amount and sort them
-      const topDonors = filteredDonors
-        .sort(
-          (a, b) =>
-            (b.total_donation_amount || 0) - (a.total_donation_amount || 0)
-        )
-        .slice(0, targetDonorCount);
+      const excludeIds = [...selectedDonors, ...existingDonors]
+        .map(d => d.id)
+        .join(",");
 
-      setFilteredDonors(topDonors);
+        const response = await axios.get("/api/donor/recommend", {
+          params: {
+            count: targetDonorCount,
+            excludeIds,
+          },
+          withCredentials: true,
+        });
+        
+      setFilteredDonors(response.data.recommended || []);
+
     } catch (error) {
       console.error("Error recommending donors:", error);
       toast({
@@ -220,6 +146,7 @@ export default function AddDonorsModal({
     }
 
     setSelectedDonors(filteredDonors.map((donor) => ({ ...donor, status: "invited" })));
+    setHasAddedAll(true);
 
     toast({
       title: "All donors added",
@@ -237,10 +164,9 @@ export default function AddDonorsModal({
   };
 
   const handleSubmit = () => {
-    // Prepare data for submission
     const donorsToAdd = selectedDonors;
     const donorsToRemove = removedExistingDonors;
-    
+
     if (donorsToAdd.length === 0 && donorsToRemove.length === 0) {
       toast({
         title: "No changes made",
@@ -254,27 +180,19 @@ export default function AddDonorsModal({
     onClose();
   };
 
-  // Render all donors in a consistent format
   const renderDonorsList = () => {
-    // Format selected donors to ensure they have the right properties
     const formattedSelectedDonors = selectedDonors.map(donor => {
       const name = donor.organization_name || 
-                  (donor.first_name && donor.last_name ? 
-                    `${donor.first_name} ${donor.last_name}` : 
-                    donor.name || donor.label || "Unknown");
-      
+        (donor.first_name && donor.last_name ? `${donor.first_name} ${donor.last_name}` : donor.name || donor.label || "Unknown");
       return {
         ...donor,
         label: name,
         name: name
       };
     });
-    
-    const allSelectedDonors = [
-      ...formattedSelectedDonors,
-      ...formattedExistingDonors
-    ];
-    
+
+    const allSelectedDonors = [...formattedSelectedDonors, ...formattedExistingDonors];
+
     return (
       <div className="space-y-4">
         <CurrentDonorsList
@@ -282,8 +200,7 @@ export default function AddDonorsModal({
           onRemove={(donor) => donor.isExisting ? removeExistingDonor(donor.id) : removeDonor(donor.id)}
           onStatusChange={handleDonorStatusChange}
         />
-        
-        {/* Removed donors count */}
+
         {removedExistingDonors.length > 0 && (
           <div className="mt-4 text-sm text-red-500">
             {removedExistingDonors.length} donor(s) will be removed from the event
@@ -295,20 +212,16 @@ export default function AddDonorsModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent
-        className="p-0 overflow-hidden flex flex-col max-h-[90vh]"
-        style={{ width: '90vw', maxWidth: '1400px' }}
-      >
+      <DialogContent className="p-0 overflow-hidden flex flex-col max-h-[90vh]" style={{ width: '90vw', maxWidth: '1400px' }}>
         <DialogHeader className="p-4 pb-2 border-b">
           <DialogTitle className="text-xl font-bold">Add Donors to Event</DialogTitle>
         </DialogHeader>
 
         <div className="p-4 pt-2 overflow-y-auto flex-grow">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Left side - Donor search and filters */}
             <div>
               <h3 className="text-base font-semibold mb-3">Find Donors</h3>
-              
+
               <div className="mb-4">
                 <Label htmlFor="search" className="mb-1 block">Search donors</Label>
                 <Input
@@ -319,7 +232,7 @@ export default function AddDonorsModal({
                   className="w-full"
                 />
               </div>
-              
+
               <div className="mb-4">
                 <h4 className="text-sm font-medium mb-1">Filters</h4>
                 <Card>
@@ -335,10 +248,7 @@ export default function AddDonorsModal({
               <div className="mb-4">
                 <div className="flex flex-col space-y-3">
                   <div>
-                    <Label
-                      htmlFor="donorCount"
-                      className="mb-1 block"
-                    >
+                    <Label htmlFor="donorCount" className="mb-1 block">
                       Target Number of Donors to Include
                     </Label>
                     <div className="flex items-center gap-2">
@@ -369,7 +279,7 @@ export default function AddDonorsModal({
                         type="button"
                         variant="outline"
                         onClick={addAllDonors}
-                        disabled={!showDonors || filteredDonors.length === 0}
+                        disabled={!showDonors || filteredDonors.length === 0 || hasAddedAll}
                       >
                         Add All
                       </Button>
@@ -392,7 +302,6 @@ export default function AddDonorsModal({
               )}
             </div>
 
-            {/* Right side - Combined donors list */}
             <div>
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-base font-semibold">
@@ -409,7 +318,7 @@ export default function AddDonorsModal({
                   </Button>
                 )}
               </div>
-              
+
               <Card>
                 <CardContent className="p-3">
                   {renderDonorsList()}

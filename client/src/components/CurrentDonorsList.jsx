@@ -7,7 +7,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { UserMinus } from "lucide-react";
 
 export default function CurrentDonorsList({ donors, onStatusChange, onRemove }) {
-  console.log("Donors:", donors);
   return (
     <div className="h-full flex flex-col">
       <Card className="flex-1 border border-muted">
