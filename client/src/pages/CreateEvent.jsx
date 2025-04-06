@@ -59,44 +59,27 @@ export default function CreateEvent() {
     try {
       setLoading(true);
 
-      const response = await axios.get("/api/donor", {
+      // Replace the donor API call with the recommend API
+      const response = await axios.get("/api/donor/recommend", {
         params: {
-          page: 1,
-          limit: 100,
+          count: targetDonorCount || 20, // Use targetDonorCount or default to 20
           search: searchTerm,
-          sortBy: sortBy,
-          sortOrder: sortOrder,
           ...activeFilters,
+          // Pass any already selected donor IDs to exclude them
+          excludeIds: formData.donors.map(d => d.id || d.value).join(',')
         },
       });
 
-      console.log("API response received, applying client-side filters");
-
-      // Apply client-side filtering
-      let filteredResults = response.data.donors;
-
-      // Add more filters as needed
-      if (activeFilters.tag) {
-        console.log("Applying tag filter:", activeFilters.tag);
-        filteredResults = filteredResults.filter(
-          (donor) =>
-            donor.tags &&
-            donor.tags.some(
-              (tag) =>
-                tag.id === activeFilters.tag || tag.name === activeFilters.tag
-            )
-        );
-      }
-
-      setFilteredDonors(filteredResults);
+      // Update to use the recommended property from the response
+      setFilteredDonors(response.data.recommended || []);
       setAvailableFilters(response.data.filters || {});
     } catch (error) {
-      console.error("Error fetching donors:", error);
+      console.error("Error fetching recommended donors:", error);
       setError("Failed to fetch donors");
     } finally {
       setLoading(false);
     }
-  }, [searchTerm, activeFilters, sortBy, sortOrder]);
+  }, [searchTerm, activeFilters, targetDonorCount, formData.donors]);
 
   useEffect(() => {
     if (currentStep === 2) {
@@ -235,22 +218,24 @@ export default function CreateEvent() {
 
     try {
       setLoading(true);
-      setShowDonors(true); // Show donors after recommendation
-
-      // Get top donors based on donation amount and sort them
-      const topDonors = filteredDonors
-        .sort(
-          (a, b) =>
-            (b.total_donation_amount || 0) - (a.total_donation_amount || 0)
-        )
-        .slice(0, targetDonorCount);
-
-      // Just update the filtered donors list, don't add to selection
-      setFilteredDonors(topDonors);
+      
+      // Call the recommend API directly
+      const response = await axios.get("/api/donor/recommend", {
+        params: {
+          count: targetDonorCount,
+          ...activeFilters,
+          // Exclude already selected donors
+          excludeIds: formData.donors.map(d => d.id || d.value).join(',')
+        },
+      });
+      
+      // Update the filtered donors with the recommended donors
+      setFilteredDonors(response.data.recommended || []);
+      setShowDonors(true);
 
       toast({
         title: "Donors recommended",
-        description: `Showing top ${topDonors.length} donors based on donation amount`,
+        description: `Showing top ${response.data.recommended.length} donors based on donation amount`,
       });
     } catch (error) {
       console.error("Error recommending donors:", error);
