@@ -48,6 +48,7 @@ export default function Donors() {
     column: "updated_at",
     direction: "desc",
   });
+  const [expandedTags, setExpandedTags] = useState({});
 
   // Handle filter changes
   const handleFilterChange = useCallback(
@@ -485,22 +486,64 @@ export default function Donors() {
                       <TableCell className="truncate max-w-[150px]" title={donor.email_restrictions || "None"}>
                         {donor.email_restrictions || "None"}
                       </TableCell>
-                      <TableCell className="truncate max-w-[150px]">
-  <div className="flex flex-wrap gap-1">
-    {donor.tags && donor.tags.length > 0 
-      ? donor.tags.map((t, idx) => (
-          <span
-            key={idx}
-            className="text-xs px-2 py-1 rounded-full text-white"
-            style={{ backgroundColor: t.tag?.color || t.color || '#6366f1' }}
-          >
-            {t.tag?.name || t.name}
-          </span>
-        ))
-      : "None"}
-  </div>
-</TableCell>
-
+                      <TableCell className="py-4">
+                        <div className="flex flex-wrap gap-1 items-center">
+                          {donor.tags && donor.tags.length > 0 
+                            ? (expandedTags[donor.id] 
+                                ? <>
+                                    {donor.tags.map((t, idx) => (
+                                      <span
+                                        key={idx}
+                                        className="text-xs px-2 py-1 rounded-full text-white inline-flex items-center"
+                                        style={{ backgroundColor: t.tag?.color || t.color || '#6366f1' }}
+                                        onClick={(e) => e.stopPropagation()}
+                                      >
+                                        {t.tag?.name || t.name}
+                                      </span>
+                                    ))}
+                                    <button
+                                      className="text-xs text-blue-600 hover:text-blue-800 font-medium ml-1"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setExpandedTags(prev => ({
+                                          ...prev,
+                                          [donor.id]: false
+                                        }));
+                                      }}
+                                    >
+                                      Show less
+                                    </button>
+                                  </>
+                                : <>
+                                    <span
+                                      className="text-xs px-2 py-1 rounded-full text-white inline-flex items-center"
+                                      style={{ 
+                                        backgroundColor: donor.tags[0]?.tag?.color || 
+                                                       donor.tags[0]?.color || 
+                                                       '#6366f1' 
+                                      }}
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+                                      {donor.tags[0]?.tag?.name || donor.tags[0]?.name}
+                                    </span>
+                                    {donor.tags.length > 1 && (
+                                      <button
+                                        className="text-xs text-blue-600 hover:text-blue-800 font-medium ml-1"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setExpandedTags(prev => ({
+                                            ...prev,
+                                            [donor.id]: true
+                                          }));
+                                        }}
+                                      >
+                                        +{donor.tags.length - 1} more
+                                      </button>
+                                    )}
+                                  </>)
+                            : "None"}
+                        </div>
+                      </TableCell>
                     </TableRow>
                   ))
                 )}
