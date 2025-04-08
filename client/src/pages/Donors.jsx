@@ -442,7 +442,7 @@ export default function Donors() {
                   donors.map((donor) => (
                     <TableRow
                       key={donor.id}
-                      className="cursor-pointer hover:bg-slate-50"
+                      className="cursor-pointer even:bg-white odd:bg-gray-50 hover:bg-slate-100"
                       onClick={() => handleDonorClick(donor)}
                     >
                       <TableCell className="checkbox-wrapper">
