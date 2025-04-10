@@ -122,22 +122,18 @@ const DonorFilters = ({ onFilterChange, availableFilters = {} }) => {
   };
 
   // Handler for phone type selection
-  const handlePhoneTypeSelect = (e) => {
-    const selectedPhoneType = e.target.value;
-    if (selectedPhoneType && !filters.contactPhoneTypes.includes(selectedPhoneType)) {
+  const handlePhoneTypeSelect = (value) => {
+    if (filters.contactPhoneType === value && value !== 'all') {
       setFilters(prev => ({
         ...prev,
-        contactPhoneTypes: [...prev.contactPhoneTypes, selectedPhoneType]
+        contactPhoneType: ''
+      }));
+    } else {
+      setFilters(prev => ({
+        ...prev,
+        contactPhoneType: value
       }));
     }
-  };
-
-  // Handle phone type tag removal
-  const handleRemovePhoneType = (phoneType) => {
-    setFilters(prev => ({
-      ...prev, 
-      contactPhoneTypes: prev.contactPhoneTypes.filter(type => type !== phoneType)
-    }));
   };
 
   // Handler for tag selection with MultiSelect
