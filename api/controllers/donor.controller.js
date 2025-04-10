@@ -223,7 +223,8 @@ export const getDonors = async (req, res, next) => {
 
     // Largest gift appeal filter
     if (largestGiftAppeal) {
-      whereClause.largest_gift_appeal = largestGiftAppeal;
+      const appeals = typeof largestGiftAppeal === 'string' ? largestGiftAppeal.split(',') : largestGiftAppeal;
+      whereClause.largest_gift_appeal = { in: appeals };
     }
 
     // Contact phone type filter
@@ -233,28 +234,88 @@ export const getDonors = async (req, res, next) => {
 
     // Phone restrictions filter
     if (phoneRestrictions) {
-      if (phoneRestrictions === 'None') {
-        whereClause.phone_restrictions = null;
-      } else {
-        whereClause.phone_restrictions = phoneRestrictions;
+      const restrictions = typeof phoneRestrictions === 'string' ? phoneRestrictions.split(',') : phoneRestrictions;
+      
+      // 创建一个 OR 条件数组
+      let phoneConditions = [];
+      
+      // 如果包含 "None"，添加 null 条件
+      if (restrictions.includes('None')) {
+        phoneConditions.push({ phone_restrictions: null });
+      }
+      
+      // 添加其他非空值条件
+      const nonNoneRestrictions = restrictions.filter(r => r !== 'None');
+      if (nonNoneRestrictions.length > 0) {
+        phoneConditions.push({ phone_restrictions: { in: nonNoneRestrictions } });
+      }
+      
+      // 如果有多个条件，使用 OR 连接
+      if (phoneConditions.length > 0) {
+        // 如果已经有 OR 条件，合并
+        if (whereClause.OR) {
+          whereClause.OR = [...whereClause.OR, ...phoneConditions];
+        } else {
+          whereClause.OR = phoneConditions;
+        }
       }
     }
 
     // Email restrictions filter
     if (emailRestrictions) {
-      if (emailRestrictions === 'None') {
-        whereClause.email_restrictions = null;
-      } else {
-        whereClause.email_restrictions = emailRestrictions;
+      const restrictions = typeof emailRestrictions === 'string' ? emailRestrictions.split(',') : emailRestrictions;
+      
+      // 创建一个 OR 条件数组
+      let emailConditions = [];
+      
+      // 如果包含 "None"，添加 null 条件
+      if (restrictions.includes('None')) {
+        emailConditions.push({ email_restrictions: null });
+      }
+      
+      // 添加其他非空值条件
+      const nonNoneRestrictions = restrictions.filter(r => r !== 'None');
+      if (nonNoneRestrictions.length > 0) {
+        emailConditions.push({ email_restrictions: { in: nonNoneRestrictions } });
+      }
+      
+      // 如果有多个条件，使用 OR 连接
+      if (emailConditions.length > 0) {
+        // 如果已经有 OR 条件，合并
+        if (whereClause.OR) {
+          whereClause.OR = [...whereClause.OR, ...emailConditions];
+        } else {
+          whereClause.OR = emailConditions;
+        }
       }
     }
 
     // Communication restrictions filter
     if (communicationRestrictions) {
-      if (communicationRestrictions === 'None') {
-        whereClause.communication_restrictions = null;
-      } else {
-        whereClause.communication_restrictions = communicationRestrictions;
+      const restrictions = typeof communicationRestrictions === 'string' ? communicationRestrictions.split(',') : communicationRestrictions;
+      
+      // 创建一个 OR 条件数组
+      let commConditions = [];
+      
+      // 如果包含 "None"，添加 null 条件
+      if (restrictions.includes('None')) {
+        commConditions.push({ communication_restrictions: null });
+      }
+      
+      // 添加其他非空值条件
+      const nonNoneRestrictions = restrictions.filter(r => r !== 'None');
+      if (nonNoneRestrictions.length > 0) {
+        commConditions.push({ communication_restrictions: { in: nonNoneRestrictions } });
+      }
+      
+      // 如果有多个条件，使用 OR 连接
+      if (commConditions.length > 0) {
+        // 如果已经有 OR 条件，合并
+        if (whereClause.OR) {
+          whereClause.OR = [...whereClause.OR, ...commConditions];
+        } else {
+          whereClause.OR = commConditions;
+        }
       }
     }
 

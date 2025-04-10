@@ -87,7 +87,7 @@ export default function Donors() {
       
 
       if (filters.city) {
-        params.city = filters.city; // ✅ filters.city 是逗号分隔字符串
+        params.city = filters.city; 
       }
       
       
@@ -155,12 +155,34 @@ export default function Donors() {
     });
   };
 
-  // Handle select all rows
+  // Handle file upload
+  const getCurrentPageDonorIds = () => {
+    return donors.map(donor => donor.id);
+  };
+
+  // 2. Handle select all
   const handleSelectAll = () => {
-    if (selectedDonors.length === donors.length) {
-      setSelectedDonors([]);
+    const currentPageIds = getCurrentPageDonorIds();
+    const allCurrentPageSelected = currentPageIds.every(id => 
+      selectedDonors.includes(id)
+    );
+    
+    if (allCurrentPageSelected) {
+      // if all current page donors are selected, remove them from selection
+      setSelectedDonors(prev => 
+        prev.filter(id => !currentPageIds.includes(id))
+      );
     } else {
-      setSelectedDonors(donors.map((donor) => donor.id));
+      // otherwise, add all current page donors to selection
+      setSelectedDonors(prev => {
+        const newSelection = [...prev];
+        currentPageIds.forEach(id => {
+          if (!newSelection.includes(id)) {
+            newSelection.push(id);
+          }
+        });
+        return newSelection;
+      });
     }
   };
 
@@ -203,16 +225,38 @@ export default function Donors() {
     ) {
       try {
         setLoading(true);
-        await Promise.all(
-          selectedDonors.map((id) => axios.delete(`/api/donor/${id}`))
-        );
+        
+        // batch delete requests
+        const batchSize = 20;
+        let successCount = 0;
+        let failureCount = 0;
+        
+        for (let i = 0; i < selectedDonors.length; i += batchSize) {
+          const batch = selectedDonors.slice(i, i + batchSize);
+          const batchPromises = batch.map(id => 
+            axios.delete(`/api/donor/${id}`)
+              .then(() => successCount++)
+              .catch(() => failureCount++)
+          );
+          
+          await Promise.all(batchPromises);
+        }
 
-        toast({
-          title: "Success",
-          description: `${selectedDonors.length} donor(s) deleted successfully.`,
-        });
+        // show success message
+        if (failureCount === 0) {
+          toast({
+            title: "Success",
+            description: `${successCount} donor(s) deleted successfully.`,
+          });
+        } else {
+          toast({
+            title: "Partial Success",
+            description: `${successCount} donor(s) deleted successfully. Failed to delete ${failureCount} donor(s).`,
+            variant: "warning",
+          });
+        }
 
-        // Clear selection and refresh list
+        // deselect all donors
         setSelectedDonors([]);
         fetchDonors(pagination.page, searchTerm, activeFilters);
       } catch (error) {
@@ -228,51 +272,89 @@ export default function Donors() {
     }
   };
 
-  const handleBulkExport = () => {
+  const handleBulkExport = async () => {
     if (selectedDonors.length === 0) return;
 
-    // Create CSV content
-    let csvContent = "data:text/csv;charset=utf-8,";
+    try {
+      setLoading(true);
+      
+      // get donor data for selected donors
+      const selectedDonorsData = [];
+      
+      // batch requests to avoid hitting API limits
+      const batchSize = 20; 
+      
+      for (let i = 0; i < selectedDonors.length; i += batchSize) {
+        const batch = selectedDonors.slice(i, i + batchSize);
+        const batchRequests = batch.map(id => axios.get(`/api/donor/${id}`));
+        
+        try {
+          const results = await Promise.all(batchRequests);
+          selectedDonorsData.push(...results.map(res => res.data));
+        } catch (error) {
+          console.error("Error fetching donor data:", error);
+        }
+      }
 
-    // Add headers
-    csvContent +=
-      "ID,Name,Type,Email,Phone,City,State,Country,Total Donations,Tags\n";
+      // if no data found, show error
+      if (selectedDonorsData.length === 0) {
+        toast({
+          title: "Export Error",
+          description: "Failed to fetch donor data for export.",
+          variant: "destructive",
+        });
+        return;
+      }
 
-    // Add rows for selected donors
-    selectedDonors.forEach((id) => {
-      const donor = donors.find((d) => d.id === id);
-      if (donor) {
+      // create CSV content
+      let csvContent = "data:text/csv;charset=utf-8,";
+
+      // add header row
+      csvContent +=
+        "ID,Name,Type,Email,Phone,City,State,Country,Total Donations,Tags\n";
+
+      // add data rows
+      selectedDonorsData.forEach((donor) => {
         const name = donor.is_company
-          ? donor.organization_name
-          : `${donor.first_name || ""} ${donor.last_name || ""}`;
+          ? donor.organization_name || "Unnamed Organization"
+          : `${donor.first_name || ""} ${donor.last_name || ""}`.trim() || "Unnamed Donor";
         const type = donor.is_company ? "Company" : "Individual";
-        const tags = donor.tags
-          ? donor.tags.map((t) => t.tag.name).join("|")
+        const tags = donor.tags && donor.tags.length > 0
+          ? donor.tags.map((t) => t.tag?.name || t.name).join("|")
           : "";
 
         csvContent += `${donor.id},"${name}",${type},${donor.email || ""},${
           donor.phone_number || ""
         },`;
-        csvContent += `${donor.city || ""},${donor.state || ""},${
+        csvContent += `${donor.city?.replace(/_/g, ' ') || ""},${donor.state || ""},${
           donor.country || ""
         },`;
         csvContent += `${donor.total_donation_amount || 0},"${tags}"\n`;
-      }
-    });
+      });
 
-    // Create download link
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "selected_donors.csv");
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+      // create a link to download the CSV
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", "selected_donors.csv");
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
 
-    toast({
-      title: "Export Complete",
-      description: `${selectedDonors.length} donor(s) exported to CSV.`,
-    });
+      toast({
+        title: "Export Complete",
+        description: `${selectedDonorsData.length} donor(s) exported to CSV.`,
+      });
+    } catch (error) {
+      console.error("Error exporting donors:", error);
+      toast({
+        title: "Export Error",
+        description: "Failed to export donors. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Initial load
@@ -285,10 +367,20 @@ export default function Donors() {
   }, []);
 
   const handleDonorClick = (donor) => {
-    // 将整个 donor 对象存储在 localStorage 中
+    // 1. Store the selected donor in localStorage
+    // 2. Navigate to the donor detail page
     localStorage.setItem('selectedDonor', JSON.stringify(donor));
     navigate(`/donors/${donor.id}`);
   };
+
+  // 3. ensure the selected donors are in sync with the current page
+  const currentPageIds = getCurrentPageDonorIds();
+  const allCurrentPageSelected = 
+    currentPageIds.length > 0 && 
+    currentPageIds.every(id => selectedDonors.includes(id));
+  const someCurrentPageSelected = 
+    !allCurrentPageSelected && 
+    currentPageIds.some(id => selectedDonors.includes(id));
 
   return (
     <div className="w-full max-w-[1200px] mx-auto px-4">
@@ -309,35 +401,33 @@ export default function Donors() {
         </div>
       </div>
 
-      <Card className="mb-6 w-full">
-        <CardContent className="pt-6">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1">
-              <Input
-                placeholder="Search donors..."
-                value={searchTerm}
-                onChange={handleSearchChange}
-                className="w-full"
-              />
-            </div>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                onClick={() => fetchDonors(1, searchTerm, activeFilters)}
-              >
-                Search
-              </Button>
-              <Button
-                variant="outline"
-                onClick={handleClearSearch}
-                disabled={!searchTerm}
-              >
-                Clear
-              </Button>
-            </div>
+      <div className="mb-6 w-full">
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex-1">
+            <Input
+              placeholder="Search donors..."
+              value={searchTerm}
+              onChange={handleSearchChange}
+              className="w-full"
+            />
           </div>
-        </CardContent>
-      </Card>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => fetchDonors(1, searchTerm, activeFilters)}
+            >
+              Search
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleClearSearch}
+              disabled={!searchTerm}
+            >
+              Clear
+            </Button>
+          </div>
+        </div>
+      </div>
 
       <DonorFilters
         onFilterChange={handleFilterChange}
@@ -383,10 +473,8 @@ export default function Donors() {
                 <TableRow>
                   <TableHead className="w-12">
                     <Checkbox
-                      checked={
-                        selectedDonors.length === donors.length &&
-                        donors.length > 0
-                      }
+                      checked={allCurrentPageSelected}
+                      indeterminate={someCurrentPageSelected}
                       onCheckedChange={handleSelectAll}
                     />
                   </TableHead>
