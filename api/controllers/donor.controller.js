@@ -621,30 +621,36 @@ export const recommendDonors = async (req, res, next) => {
       minDonationAmount,
       maxDonationAmount,
       city,
-      tags
+      tags,
+      search, // ✅ optional
     } = req.query;
+
+    console.log("📥 recommendDonors req.query:", req.query);
 
     const take = parseInt(count);
     const excludeIdArray = excludeIds
-    ? excludeIds.split(',').map(id => id.trim())
-    : [];
-  
+      ? excludeIds
+          .split(',')
+          .map(id => id.trim())
+          .filter(id => id !== "")
+      : [];
 
+    // Base where clause
     let whereClause = {
       is_deleted: false,
     };
 
-    // Exclude already selected donors
+    // Exclude selected donors
     if (excludeIdArray.length > 0) {
       whereClause.id = { notIn: excludeIdArray };
     }
 
-    // Exclude donors already in this event
+    // Exclude donors already in the event
     if (eventId) {
       whereClause.events = {
         none: {
-          event_id: parseInt(eventId)
-        }
+          event_id: parseInt(eventId),
+        },
       };
     }
 
@@ -654,7 +660,7 @@ export const recommendDonors = async (req, res, next) => {
       whereClause.city = { in: cities };
     }
 
-    // Donation amount filters
+    // Donation amount filter
     if (minDonationAmount || maxDonationAmount) {
       whereClause.total_donation_amount = {};
       if (minDonationAmount !== undefined) {
@@ -665,6 +671,14 @@ export const recommendDonors = async (req, res, next) => {
       }
     }
 
+    // ✅ Add name search
+    if (search) {
+      whereClause.OR = [
+        { first_name: { contains: search } },
+        { last_name: { contains: search } },
+      ];
+    }
+
     // Tags filter
     const tagsFilter = tags
       ? {
@@ -672,17 +686,17 @@ export const recommendDonors = async (req, res, next) => {
             some: {
               tag: {
                 name: {
-                  in: Array.isArray(tags) ? tags : [tags]
-                }
-              }
-            }
-          }
+                  in: Array.isArray(tags) ? tags : [tags],
+                },
+              },
+            },
+          },
         }
       : {};
 
     const finalWhere = {
       ...whereClause,
-      ...tagsFilter
+      ...tagsFilter,
     };
 
     const recommendedDonors = await prisma.donor.findMany({
@@ -692,17 +706,17 @@ export const recommendDonors = async (req, res, next) => {
         events: true,
       },
       orderBy: {
-        total_donation_amount: 'desc'
+        total_donation_amount: 'desc',
       },
       take,
     });
 
     res.status(200).json({
-      recommended: recommendedDonors
+      recommended: recommendedDonors,
     });
 
   } catch (error) {
+    console.error("❌ recommendDonors error:", error);
     next(error);
   }
 };
-

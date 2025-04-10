@@ -33,13 +33,15 @@ app.use('/api/event', eventRoutes);
 app.use('/api/tag', tagRoutes);
 
 app.use((err, req, res, next) => {
-  const statusCode = err.statusCode || 500;
-  const message = err.message || "Something went wrong. Please try again later.";
-
-  return res.status(statusCode).json({
+    console.error("❌ Server Error:", err);
+  
+    const statusCode = err.statusCode || 500;
+    const message = err.message || "Something went wrong. Please try again later.";
+  
+    return res.status(statusCode).json({
       success: false,
       statusCode,
       message,
+    });
   });
-});
   
