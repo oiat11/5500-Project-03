@@ -62,7 +62,7 @@ export default function DonorList({ donors, onToggle, getActionIcon = "add" }) {
                 className="transition-colors hover:bg-primary/20"
               >
                 {getActionIcon === "remove" ? (
-                  <UserMinus className="h-4 w-4" />
+                  <UserMinus className="h-4 w-4 text-red-600" />
                 ) : (
                   <UserPlus className="h-4 w-4" />
                 )}
