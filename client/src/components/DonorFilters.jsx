@@ -12,11 +12,11 @@ const DonorFilters = ({ onFilterChange, availableFilters = {} }) => {
   const [filters, setFilters] = useState({
     minDonationAmount: '',
     maxDonationAmount: '',
-    largestGiftAppeal: '',
+    largestGiftAppeal: [],
     cities: [],
     contactPhoneType: '',
-    phoneRestrictions: '',
-    emailRestrictions: '',
+    phoneRestrictions: [],
+    emailRestrictions: [],
     tags: [],
     tagSearch: ''
   });
@@ -122,8 +122,22 @@ const DonorFilters = ({ onFilterChange, availableFilters = {} }) => {
   };
 
   // Handler for phone type selection
-  const handlePhoneTypeSelect = (type) => {
-    setFilters(prev => ({ ...prev, contactPhoneType: type }));
+  const handlePhoneTypeSelect = (e) => {
+    const selectedPhoneType = e.target.value;
+    if (selectedPhoneType && !filters.contactPhoneTypes.includes(selectedPhoneType)) {
+      setFilters(prev => ({
+        ...prev,
+        contactPhoneTypes: [...prev.contactPhoneTypes, selectedPhoneType]
+      }));
+    }
+  };
+
+  // Handle phone type tag removal
+  const handleRemovePhoneType = (phoneType) => {
+    setFilters(prev => ({
+      ...prev, 
+      contactPhoneTypes: prev.contactPhoneTypes.filter(type => type !== phoneType)
+    }));
   };
 
   // Handler for tag selection with MultiSelect
@@ -131,6 +145,60 @@ const DonorFilters = ({ onFilterChange, availableFilters = {} }) => {
     setFilters(prev => ({
       ...prev,
       tags: selectedTags
+    }));
+  };
+
+  // Largest Gift Appeal 多选处理
+  const handleLargestGiftAppealSelect = (e) => {
+    const selectedAppeal = e.target.value;
+    if (selectedAppeal && !filters.largestGiftAppeal.includes(selectedAppeal)) {
+      setFilters(prev => ({
+        ...prev,
+        largestGiftAppeal: [...prev.largestGiftAppeal, selectedAppeal]
+      }));
+    }
+  };
+
+  const handleRemoveLargestGiftAppeal = (appeal) => {
+    setFilters(prev => ({
+      ...prev,
+      largestGiftAppeal: prev.largestGiftAppeal.filter(a => a !== appeal)
+    }));
+  };
+
+  // Phone Restrictions 多选处理
+  const handlePhoneRestrictionSelect = (e) => {
+    const selectedRestriction = e.target.value;
+    if (selectedRestriction && !filters.phoneRestrictions.includes(selectedRestriction)) {
+      setFilters(prev => ({
+        ...prev,
+        phoneRestrictions: [...prev.phoneRestrictions, selectedRestriction]
+      }));
+    }
+  };
+
+  const handleRemovePhoneRestriction = (restriction) => {
+    setFilters(prev => ({
+      ...prev,
+      phoneRestrictions: prev.phoneRestrictions.filter(r => r !== restriction)
+    }));
+  };
+
+  // Email Restrictions 多选处理
+  const handleEmailRestrictionSelect = (e) => {
+    const selectedRestriction = e.target.value;
+    if (selectedRestriction && !filters.emailRestrictions.includes(selectedRestriction)) {
+      setFilters(prev => ({
+        ...prev,
+        emailRestrictions: [...prev.emailRestrictions, selectedRestriction]
+      }));
+    }
+  };
+
+  const handleRemoveEmailRestriction = (restriction) => {
+    setFilters(prev => ({
+      ...prev,
+      emailRestrictions: prev.emailRestrictions.filter(r => r !== restriction)
     }));
   };
 
@@ -142,10 +210,16 @@ const DonorFilters = ({ onFilterChange, availableFilters = {} }) => {
       tags: filters.tags.length > 0
         ? filters.tags.map(tag => typeof tag === 'object' ? tag.value : tag)
         : undefined,
-      largestGiftAppeal: filters.largestGiftAppeal || undefined,
+      largestGiftAppeal: filters.largestGiftAppeal.length > 0 
+        ? filters.largestGiftAppeal.join(',') 
+        : undefined,
       contactPhoneType: filters.contactPhoneType || undefined,
-      phoneRestrictions: filters.phoneRestrictions || undefined,
-      emailRestrictions: filters.emailRestrictions || undefined,
+      phoneRestrictions: filters.phoneRestrictions.length > 0 
+        ? filters.phoneRestrictions.join(',') 
+        : undefined,
+      emailRestrictions: filters.emailRestrictions.length > 0 
+        ? filters.emailRestrictions.join(',') 
+        : undefined,
       minDonationAmount: filters.minDonationAmount || undefined,
       maxDonationAmount: filters.maxDonationAmount || undefined,
     };
@@ -165,11 +239,11 @@ const DonorFilters = ({ onFilterChange, availableFilters = {} }) => {
     setFilters({
       minDonationAmount: '',
       maxDonationAmount: '',
-      largestGiftAppeal: '',
+      largestGiftAppeal: [],
       cities: [],
       contactPhoneType: '',
-      phoneRestrictions: '',
-      emailRestrictions: '',
+      phoneRestrictions: [],
+      emailRestrictions: [],
       tags: [],
       tagSearch: ''
     });
@@ -285,25 +359,53 @@ const DonorFilters = ({ onFilterChange, availableFilters = {} }) => {
               {/* Largest Gift Appeal Filter */}
               <div>
                 <Label htmlFor="largestGiftAppeal" className="mb-1">Largest Gift Appeal</Label>
-                <div className="flex gap-2">
-                  <select
-                    id="largestGiftAppeal"
-                    name="largestGiftAppeal"
-                    value={filters.largestGiftAppeal}
-                    onChange={handleSelectChange}
-                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {largestGiftAppealOptions.map(option => (
-                      <option key={option.value} value={option.value}>{option.label}</option>
-                    ))}
-                  </select>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleClearFilter('largestGiftAppeal')}
-                  >
-                    Clear
-                  </Button>
+                <div className="flex flex-col gap-2">
+                  <div className="flex gap-2">
+                    <select
+                      id="largestGiftAppeal"
+                      onChange={handleLargestGiftAppealSelect}
+                      value=""
+                      className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <option value="">Select an appeal...</option>
+                      {largestGiftAppealOptions
+                        .filter(option => option.value && !filters.largestGiftAppeal.includes(option.value))
+                        .map(option => (
+                          <option key={option.value} value={option.value}>{option.label}</option>
+                        ))}
+                    </select>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleClearFilter('largestGiftAppeal')}
+                    >
+                      Clear
+                    </Button>
+                  </div>
+                  
+                  {/* Display selected appeals */}
+                  {filters.largestGiftAppeal.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {filters.largestGiftAppeal.map(appeal => {
+                        const option = largestGiftAppealOptions.find(opt => opt.value === appeal);
+                        return (
+                          <span 
+                            key={appeal} 
+                            className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+                          >
+                            {option ? option.label : appeal}
+                            <button 
+                              type="button"
+                              className="ml-1 text-blue-500 hover:text-blue-800 focus:outline-none"
+                              onClick={() => handleRemoveLargestGiftAppeal(appeal)}
+                            >
+                              ×
+                            </button>
+                          </span>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -379,50 +481,106 @@ const DonorFilters = ({ onFilterChange, availableFilters = {} }) => {
               {/* Phone Restrictions Filter */}
               <div>
                 <Label htmlFor="phoneRestrictions" className="mb-1">Phone Restrictions</Label>
-                <div className="flex gap-2">
-                  <select
-                    id="phoneRestrictions"
-                    name="phoneRestrictions"
-                    value={filters.phoneRestrictions}
-                    onChange={handleSelectChange}
-                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {phoneRestrictionsOptions.map(option => (
-                      <option key={option.value} value={option.value}>{option.label}</option>
-                    ))}
-                  </select>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleClearFilter('phoneRestrictions')}
-                  >
-                    Clear
-                  </Button>
+                <div className="flex flex-col gap-2">
+                  <div className="flex gap-2">
+                    <select
+                      id="phoneRestrictions"
+                      onChange={handlePhoneRestrictionSelect}
+                      value=""
+                      className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <option value="">Select restrictions...</option>
+                      {phoneRestrictionsOptions
+                        .filter(option => option.value && !filters.phoneRestrictions.includes(option.value))
+                        .map(option => (
+                          <option key={option.value} value={option.value}>{option.label}</option>
+                        ))}
+                    </select>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleClearFilter('phoneRestrictions')}
+                    >
+                      Clear
+                    </Button>
+                  </div>
+                  
+                  {/* Display selected phone restrictions */}
+                  {filters.phoneRestrictions.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {filters.phoneRestrictions.map(restriction => {
+                        const option = phoneRestrictionsOptions.find(opt => opt.value === restriction);
+                        return (
+                          <span 
+                            key={restriction} 
+                            className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+                          >
+                            {option ? option.label : restriction}
+                            <button 
+                              type="button"
+                              className="ml-1 text-blue-500 hover:text-blue-800 focus:outline-none"
+                              onClick={() => handleRemovePhoneRestriction(restriction)}
+                            >
+                              ×
+                            </button>
+                          </span>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               </div>
 
               {/* Email Restrictions Filter */}
               <div>
                 <Label htmlFor="emailRestrictions" className="mb-1">Email Restrictions</Label>
-                <div className="flex gap-2">
-                  <select
-                    id="emailRestrictions"
-                    name="emailRestrictions"
-                    value={filters.emailRestrictions}
-                    onChange={handleSelectChange}
-                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {emailRestrictionsOptions.map(option => (
-                      <option key={option.value} value={option.value}>{option.label}</option>
-                    ))}
-                  </select>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleClearFilter('emailRestrictions')}
-                  >
-                    Clear
-                  </Button>
+                <div className="flex flex-col gap-2">
+                  <div className="flex gap-2">
+                    <select
+                      id="emailRestrictions"
+                      onChange={handleEmailRestrictionSelect}
+                      value=""
+                      className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <option value="">Select restrictions...</option>
+                      {emailRestrictionsOptions
+                        .filter(option => option.value && !filters.emailRestrictions.includes(option.value))
+                        .map(option => (
+                          <option key={option.value} value={option.value}>{option.label}</option>
+                        ))}
+                    </select>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleClearFilter('emailRestrictions')}
+                    >
+                      Clear
+                    </Button>
+                  </div>
+                  
+                  {/* Display selected email restrictions */}
+                  {filters.emailRestrictions.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {filters.emailRestrictions.map(restriction => {
+                        const option = emailRestrictionsOptions.find(opt => opt.value === restriction);
+                        return (
+                          <span 
+                            key={restriction} 
+                            className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+                          >
+                            {option ? option.label : restriction}
+                            <button 
+                              type="button"
+                              className="ml-1 text-blue-500 hover:text-blue-800 focus:outline-none"
+                              onClick={() => handleRemoveEmailRestriction(restriction)}
+                            >
+                              ×
+                            </button>
+                          </span>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               </div>
 
