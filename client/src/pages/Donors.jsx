@@ -87,7 +87,7 @@ export default function Donors() {
       
 
       if (filters.city) {
-        params.city = filters.city; // ✅ filters.city 是逗号分隔字符串
+        params.city = filters.city; 
       }
       
       
@@ -155,12 +155,12 @@ export default function Donors() {
     });
   };
 
-  // 1. 首先，添加一个辅助函数来获取当前页面的捐赠者ID
+  // Handle file upload
   const getCurrentPageDonorIds = () => {
     return donors.map(donor => donor.id);
   };
 
-  // 2. 修改 handleSelectAll 函数，只操作当前页面的捐赠者
+  // 2. Handle select all
   const handleSelectAll = () => {
     const currentPageIds = getCurrentPageDonorIds();
     const allCurrentPageSelected = currentPageIds.every(id => 
@@ -168,12 +168,12 @@ export default function Donors() {
     );
     
     if (allCurrentPageSelected) {
-      // 如果当前页面的所有捐赠者都已被选中，那么取消选择它们
+      // if all current page donors are selected, remove them from selection
       setSelectedDonors(prev => 
         prev.filter(id => !currentPageIds.includes(id))
       );
     } else {
-      // 否则，添加当前页面所有尚未选择的捐赠者
+      // otherwise, add all current page donors to selection
       setSelectedDonors(prev => {
         const newSelection = [...prev];
         currentPageIds.forEach(id => {
@@ -226,7 +226,7 @@ export default function Donors() {
       try {
         setLoading(true);
         
-        // 批量删除选中的捐赠者
+        // batch delete requests
         const batchSize = 20;
         let successCount = 0;
         let failureCount = 0;
@@ -242,7 +242,7 @@ export default function Donors() {
           await Promise.all(batchPromises);
         }
 
-        // 显示结果消息
+        // show success message
         if (failureCount === 0) {
           toast({
             title: "Success",
@@ -256,7 +256,7 @@ export default function Donors() {
           });
         }
 
-        // 清除选择并刷新列表
+        // deselect all donors
         setSelectedDonors([]);
         fetchDonors(pagination.page, searchTerm, activeFilters);
       } catch (error) {
@@ -278,11 +278,11 @@ export default function Donors() {
     try {
       setLoading(true);
       
-      // 为所有选中的捐赠者获取完整数据
+      // get donor data for selected donors
       const selectedDonorsData = [];
       
-      // 按批次获取数据，避免一次性发送太多请求
-      const batchSize = 20; // 每批处理的捐赠者数量
+      // batch requests to avoid hitting API limits
+      const batchSize = 20; 
       
       for (let i = 0; i < selectedDonors.length; i += batchSize) {
         const batch = selectedDonors.slice(i, i + batchSize);
@@ -293,11 +293,10 @@ export default function Donors() {
           selectedDonorsData.push(...results.map(res => res.data));
         } catch (error) {
           console.error("Error fetching donor data:", error);
-          // 继续处理其他批次
         }
       }
 
-      // 如果没有获取到任何数据，显示错误
+      // if no data found, show error
       if (selectedDonorsData.length === 0) {
         toast({
           title: "Export Error",
@@ -307,14 +306,14 @@ export default function Donors() {
         return;
       }
 
-      // 创建 CSV 内容
+      // create CSV content
       let csvContent = "data:text/csv;charset=utf-8,";
 
-      // 添加表头
+      // add header row
       csvContent +=
         "ID,Name,Type,Email,Phone,City,State,Country,Total Donations,Tags\n";
 
-      // 添加所有选中捐赠者的行
+      // add data rows
       selectedDonorsData.forEach((donor) => {
         const name = donor.is_company
           ? donor.organization_name || "Unnamed Organization"
@@ -333,7 +332,7 @@ export default function Donors() {
         csvContent += `${donor.total_donation_amount || 0},"${tags}"\n`;
       });
 
-      // 创建下载链接
+      // create a link to download the CSV
       const encodedUri = encodeURI(csvContent);
       const link = document.createElement("a");
       link.setAttribute("href", encodedUri);
@@ -368,12 +367,13 @@ export default function Donors() {
   }, []);
 
   const handleDonorClick = (donor) => {
-    // 将整个 donor 对象存储在 localStorage 中
+    // 1. Store the selected donor in localStorage
+    // 2. Navigate to the donor detail page
     localStorage.setItem('selectedDonor', JSON.stringify(donor));
     navigate(`/donors/${donor.id}`);
   };
 
-  // 3. 修改页面切换函数，确保不会因页面切换而丢失选择状态
+  // 3. ensure the selected donors are in sync with the current page
   const currentPageIds = getCurrentPageDonorIds();
   const allCurrentPageSelected = 
     currentPageIds.length > 0 && 

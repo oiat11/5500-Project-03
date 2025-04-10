@@ -148,7 +148,7 @@ const DonorFilters = ({ onFilterChange, availableFilters = {} }) => {
     }));
   };
 
-  // Largest Gift Appeal 多选处理
+  // Largest Gift Appeal multi-select
   const handleLargestGiftAppealSelect = (e) => {
     const selectedAppeal = e.target.value;
     if (selectedAppeal && !filters.largestGiftAppeal.includes(selectedAppeal)) {
@@ -166,7 +166,7 @@ const DonorFilters = ({ onFilterChange, availableFilters = {} }) => {
     }));
   };
 
-  // Phone Restrictions 多选处理
+  // Phone Restrictions multi-select
   const handlePhoneRestrictionSelect = (e) => {
     const selectedRestriction = e.target.value;
     if (selectedRestriction && !filters.phoneRestrictions.includes(selectedRestriction)) {
@@ -184,7 +184,7 @@ const DonorFilters = ({ onFilterChange, availableFilters = {} }) => {
     }));
   };
 
-  // Email Restrictions 多选处理
+  // Email Restrictions multi-select
   const handleEmailRestrictionSelect = (e) => {
     const selectedRestriction = e.target.value;
     if (selectedRestriction && !filters.emailRestrictions.includes(selectedRestriction)) {
