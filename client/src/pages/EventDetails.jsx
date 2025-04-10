@@ -1,7 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/toast";
@@ -63,7 +69,7 @@ export default function EventDetails() {
 
   const [formData, setFormData] = useState({
     donors: [],
-    tags: []
+    tags: [],
   });
 
   useEffect(() => {
@@ -71,7 +77,6 @@ export default function EventDetails() {
       fetchEventDetails();
     }
   }, [id]);
-  
 
   const fetchEventDetails = async () => {
     try {
@@ -82,30 +87,29 @@ export default function EventDetails() {
           "Content-Type": "application/json",
         },
       });
-  
+
       if (!response.ok) {
         throw new Error("Failed to fetch event details");
       }
-  
+
       const data = await response.json();
       setEvent(data.event);
       setIsEventOwner(data.isEventOwner);
-  
+
       setFormData({
-        donors: data.event.donors.map(donorEvent => ({
+        donors: data.event.donors.map((donorEvent) => ({
           value: donorEvent.donor_id,
-          label: 
-                `${donorEvent.donor.first_name} ${donorEvent.donor.last_name}`,
-          tags: donorEvent.donor.tags?.map(t => t.tag) || [],
+          label: `${donorEvent.donor.first_name} ${donorEvent.donor.last_name}`,
+          tags: donorEvent.donor.tags?.map((t) => t.tag) || [],
           totalDonation: donorEvent.donor.total_donation_amount || 0,
           city: donorEvent.donor.city,
-          status: donorEvent.status
+          status: donorEvent.status,
         })),
-        tags: data.event.tags.map(tag => ({
+        tags: data.event.tags.map((tag) => ({
           value: tag.id,
           label: tag.name,
-          color: tag.color
-        }))
+          color: tag.color,
+        })),
       });
     } catch (err) {
       console.error("Error fetching event details:", err);
@@ -119,7 +123,6 @@ export default function EventDetails() {
       setLoading(false);
     }
   };
-  
 
   const handleDelete = async () => {
     try {
@@ -186,22 +189,19 @@ export default function EventDetails() {
     }
   };
 
-
   const handleDonorStatusChange = async (donorId, newStatus) => {
     try {
       setSaving(true);
-  
-      const updatedDonors = event.donors.map(donor =>
-        donor.donor_id === donorId
-          ? { ...donor, status: newStatus }
-          : donor
+
+      const updatedDonors = event.donors.map((donor) =>
+        donor.donor_id === donorId ? { ...donor, status: newStatus } : donor
       );
-  
-      setEvent(prev => ({
+
+      setEvent((prev) => ({
         ...prev,
-        donors: updatedDonors
+        donors: updatedDonors,
       }));
-  
+
       const response = await fetch(`/api/event/${id}`, {
         method: "PUT",
         headers: {
@@ -213,22 +213,22 @@ export default function EventDetails() {
           date: event.date,
           location: event.location,
           status: event.status,
-          donors: updatedDonors.map(donor => ({
+          donors: updatedDonors.map((donor) => ({
             donorId: donor.donor_id,
-            status: donor.status
-          }))
+            status: donor.status,
+          })),
         }),
       });
-  
+
       if (!response.ok) throw new Error("Failed to update donor status");
-  
+
       toast({
         title: "Status updated",
         description: "Donor status has been updated successfully",
       });
     } catch (error) {
       console.error("Error updating donor status:", error);
-  
+
       toast({
         title: "Error",
         description: "Failed to update donor status",
@@ -300,7 +300,6 @@ export default function EventDetails() {
           </div>
         </div>
 
- 
         <h1 className="text-3xl font-bold mb-6">{event.name}</h1>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -403,7 +402,7 @@ export default function EventDetails() {
                     </Badge>
                   </CardTitle>
                   {isEventOwner && (
-                    <Button 
+                    <Button
                       size="sm"
                       variant="outline"
                       onClick={() => setShowAddDonors(true)}
@@ -437,43 +436,53 @@ export default function EventDetails() {
                             key={donorEvent.donor_id}
                             className="hover:bg-slate-50"
                           >
-                            <TableCell 
+                            <TableCell
                               className="font-medium cursor-pointer"
-                              onClick={() => navigate(`/donors/${donorEvent.donor_id}`)}
+                              onClick={() =>
+                                navigate(`/donors/${donorEvent.donor_id}`)
+                              }
                             >
-                              {
-                               `${donorEvent.donor.first_name} ${donorEvent.donor.last_name}`}
-                              
+                              {`${donorEvent.donor.first_name} ${donorEvent.donor.last_name}`}
+
                               {/* Check for tags with more flexible conditions */}
-                              {(donorEvent.donor.tags && donorEvent.donor.tags.length > 0) && (
-                                <div className="flex flex-wrap gap-1 mt-1">
-                                  {donorEvent.donor.tags.map((tagItem, index) => {
-                                    // Handle different possible tag structures
-                                    const tag = tagItem.tag || tagItem;
-                                    const tagId = tag.id || tagItem.tag_id || index;
-                                    const tagName = tag.name || '';
-                                    const tagColor = tag.color || '#6366f1';
-                                    
-                                    return (
-                                      <div
-                                        key={tagId}
-                                        className="px-2 py-0.5 rounded-full text-xs font-medium"
-                                        style={{
-                                          backgroundColor: tagColor,
-                                          color: getContrastColor(tagColor),
-                                        }}
-                                      >
-                                        {tagName}
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              )}
+                              {donorEvent.donor.tags &&
+                                donorEvent.donor.tags.length > 0 && (
+                                  <div className="flex flex-wrap gap-1 mt-1">
+                                    {donorEvent.donor.tags.map(
+                                      (tagItem, index) => {
+                                        // Handle different possible tag structures
+                                        const tag = tagItem.tag || tagItem;
+                                        const tagId =
+                                          tag.id || tagItem.tag_id || index;
+                                        const tagName = tag.name || "";
+                                        const tagColor = tag.color || "#6366f1";
+
+                                        return (
+                                          <div
+                                            key={tagId}
+                                            className="px-2 py-0.5 rounded-full text-xs font-medium"
+                                            style={{
+                                              backgroundColor: tagColor,
+                                              color: getContrastColor(tagColor),
+                                            }}
+                                          >
+                                            {tagName}
+                                          </div>
+                                        );
+                                      }
+                                    )}
+                                  </div>
+                                )}
                             </TableCell>
                             <TableCell onClick={(e) => e.stopPropagation()}>
                               <Select
                                 value={donorEvent.status}
-                                onValueChange={(value) => handleDonorStatusChange(donorEvent.donor_id, value)}
+                                onValueChange={(value) =>
+                                  handleDonorStatusChange(
+                                    donorEvent.donor_id,
+                                    value
+                                  )
+                                }
                                 disabled={!isEventOwner}
                               >
                                 <SelectTrigger className="w-[130px]">
@@ -499,19 +508,28 @@ export default function EventDetails() {
                                   </SelectValue>
                                 </SelectTrigger>
                                 <SelectContent>
-                                  <SelectItem value="invited" className="text-blue-600">
+                                  <SelectItem
+                                    value="invited"
+                                    className="text-blue-600"
+                                  >
                                     <span className="flex items-center">
                                       <span className="h-2 w-2 rounded-full bg-blue-500 mr-2"></span>
                                       Invited
                                     </span>
                                   </SelectItem>
-                                  <SelectItem value="confirmed" className="text-green-600">
+                                  <SelectItem
+                                    value="confirmed"
+                                    className="text-green-600"
+                                  >
                                     <span className="flex items-center">
                                       <span className="h-2 w-2 rounded-full bg-green-500 mr-2"></span>
                                       Confirmed
                                     </span>
                                   </SelectItem>
-                                  <SelectItem value="declined" className="text-red-600">
+                                  <SelectItem
+                                    value="declined"
+                                    className="text-red-600"
+                                  >
                                     <span className="flex items-center">
                                       <span className="h-2 w-2 rounded-full bg-red-500 mr-2"></span>
                                       Declined
@@ -520,17 +538,23 @@ export default function EventDetails() {
                                 </SelectContent>
                               </Select>
                             </TableCell>
-                            <TableCell 
+                            <TableCell
                               className="cursor-pointer"
-                              onClick={() => navigate(`/donors/${donorEvent.donor_id}`)}
+                              onClick={() =>
+                                navigate(`/donors/${donorEvent.donor_id}`)
+                              }
                             >
                               {donorEvent.donor.total_donation_amount
-                                ? `$${parseFloat(donorEvent.donor.total_donation_amount).toLocaleString()}`
+                                ? `$${parseFloat(
+                                    donorEvent.donor.total_donation_amount
+                                  ).toLocaleString()}`
                                 : "$0"}
                             </TableCell>
-                            <TableCell 
+                            <TableCell
                               className="cursor-pointer"
-                              onClick={() => navigate(`/donors/${donorEvent.donor_id}`)}
+                              onClick={() =>
+                                navigate(`/donors/${donorEvent.donor_id}`)
+                              }
                             >
                               {donorEvent.donor.city
                                 ? donorEvent.donor.city.replace(/_/g, " ")
@@ -560,7 +584,9 @@ export default function EventDetails() {
                 <Separator />
                 <div className="flex justify-between items-center">
                   <span className="text-gray-500">Created By</span>
-                  <span>{event.creator?.username || `User #${event.created_by}`}</span>
+                  <span>
+                    {event.creator?.username || `User #${event.created_by}`}
+                  </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-gray-500">Created</span>
@@ -593,9 +619,8 @@ export default function EventDetails() {
                         <span className="text-gray-500">Invited</span>
                         <Badge variant="outline" className="bg-blue-100">
                           {
-                            event.donors.filter(
-                              (d) => d.status === "invited"
-                            ).length
+                            event.donors.filter((d) => d.status === "invited")
+                              .length
                           }
                         </Badge>
                       </div>
@@ -603,9 +628,8 @@ export default function EventDetails() {
                         <span className="text-gray-500">Confirmed</span>
                         <Badge variant="outline" className="bg-green-100">
                           {
-                            event.donors.filter(
-                              (d) => d.status === "confirmed"
-                            ).length
+                            event.donors.filter((d) => d.status === "confirmed")
+                              .length
                           }
                         </Badge>
                       </div>
@@ -613,9 +637,8 @@ export default function EventDetails() {
                         <span className="text-gray-500">Declined</span>
                         <Badge variant="outline" className="bg-red-100">
                           {
-                            event.donors.filter(
-                              (d) => d.status === "declined"
-                            ).length
+                            event.donors.filter((d) => d.status === "declined")
+                              .length
                           }
                         </Badge>
                       </div>
@@ -657,100 +680,97 @@ export default function EventDetails() {
         </DialogContent>
       </Dialog>
       <EditEventDetailsModal
-  open={showEditDetails}
-  onClose={() => setShowEditDetails(false)}
-  eventData={{ ...event, id }}
-  onSave={() => window.location.reload()}
-/>
-<AddDonorsModal
-  isOpen={showAddDonors}
-  onClose={() => setShowAddDonors(false)}
-  onAddDonors={(newDonors) => {
-    // Handle adding the new donors to the event
-    const addDonorsToEvent = async (donors) => {
-      try {
-        setLoading(true);
-        
-        // Format donors for the API
-        const donorsToAdd = donors.map(donor => ({
-          donorId: donor.id,
-          status: donor.status || "invited"
-        }));
-        
-        // Get current donors to preserve their status
-        const currentDonors = event.donors.map(donor => ({
-          donorId: donor.donor_id,
-          status: donor.status
-        }));
-        
-        // Combine current and new donors
-        const updatedDonors = [...currentDonors, ...donorsToAdd];
-        
-        const response = await fetch(`/api/event/${id}`, {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            name: event.name,
-            description: event.description,
-            date: event.date,
-            location: event.location,
-            status: event.status,
-            donors: updatedDonors
-          }),
-        });
-        
-        if (!response.ok) throw new Error("Failed to add donors to event");
-        
-        toast({
-          title: "Donors added",
-          description: `Successfully added ${donors.length} donors to the event`,
-        });
-        
-        // Refresh event data to show the updated donors
-        fetchEventDetails();
-      } catch (error) {
-        console.error("Error adding donors to event:", error);
-        toast({
-          title: "Error",
-          description: "Failed to add donors to the event",
-          variant: "destructive",
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    addDonorsToEvent(newDonors);
-  }}
-  existingDonors={event.donors.map(d => ({
-    id: d.donor_id,
-    ...d.donor
-  }))}
-/>
+        open={showEditDetails}
+        onClose={() => setShowEditDetails(false)}
+        eventData={{ ...event, id }}
+        onSave={() => window.location.reload()}
+      />
+      <AddDonorsModal
+        isOpen={showAddDonors}
+        onClose={() => setShowAddDonors(false)}
+        onAddDonors={(donorsToAdd, donorsToRemove) => {
+          const addDonorsToEvent = async () => {
+            try {
+              setLoading(true);
 
+              // Convert existing donors into simplified format
+              const existing = event.donors
+                .filter((donor) => !donorsToRemove.includes(donor.donor_id))
+                .map((donor) => ({
+                  donorId: donor.donor_id,
+                  status: donor.status,
+                }));
+
+              // Combine existing (excluding removed) with new donors
+              const updatedDonors = [
+                ...existing,
+                ...donorsToAdd.map((d) => ({
+                  donorId: d.id,
+                  status: d.status || "invited",
+                })),
+              ];
+
+              const response = await fetch(`/api/event/${id}`, {
+                method: "PUT",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  name: event.name,
+                  description: event.description,
+                  date: event.date,
+                  location: event.location,
+                  status: event.status,
+                  donors: updatedDonors,
+                }),
+              });
+
+              if (!response.ok) throw new Error("Failed to update event");
+
+              toast({
+                title: "Success",
+                description: `Donors updated successfully.`,
+              });
+
+              fetchEventDetails(); // Refresh the page
+            } catch (error) {
+              console.error("Error updating event:", error);
+              toast({
+                title: "Error",
+                description: "Failed to update donors",
+                variant: "destructive",
+              });
+            } finally {
+              setLoading(false);
+            }
+          };
+
+          addDonorsToEvent();
+        }}
+        existingDonors={event.donors.map((d) => ({
+          id: d.donor_id,
+          ...d.donor,
+        }))}
+      />
     </div>
-
-    
   );
 }
 
 // Helper function to determine text color based on background color
 function getContrastColor(hexColor) {
-  if (!hexColor) return '#000000';
-  
+  if (!hexColor) return "#000000";
+
   // Remove the # if it exists
-  hexColor = hexColor.replace('#', '');
-  
+  hexColor = hexColor.replace("#", "");
+
   // Convert to RGB
   const r = parseInt(hexColor.substr(0, 2), 16);
   const g = parseInt(hexColor.substr(2, 2), 16);
   const b = parseInt(hexColor.substr(4, 2), 16);
-  
+
   // Calculate brightness (YIQ formula)
-  const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
-  
+  const yiq = (r * 299 + g * 587 + b * 114) / 1000;
+
   // Return black or white depending on brightness
-  return yiq >= 128 ? '#000000' : '#ffffff';
-} 
+  return yiq >= 128 ? "#000000" : "#ffffff";
+}

@@ -19,7 +19,8 @@ function useDebounce(value, delay) {
   return debounced;
 }
 
-export default function DonorSelection({ selectedDonors, onChange }) {
+export default function DonorSelection({ selectedDonors, onChange, excludeDonors = [] }) {
+
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [activeFilters, setActiveFilters] = useState({});
@@ -39,11 +40,12 @@ export default function DonorSelection({ selectedDonors, onChange }) {
       setLoading(true);
       const response = await axios.get("/api/donor/recommend", {
         params: {
-          count: recommendMode ? targetDonorCount || 20 : undefined,
+          count: recommendMode ? (targetDonorCount || 20) : undefined,
           search: debouncedSearch,
-          ...(recommendMode ? activeFilters : {}),
-          excludeIds: selectedDonors.map((d) => d.id).join(","),
+          ...recommendMode ? activeFilters : {},
+          excludeIds: excludeDonors.map((d) => d.id).join(","), 
         },
+        
       });
       setFilteredDonors(response.data.recommended || []);
       setAvailableFilters(response.data.filters || {});

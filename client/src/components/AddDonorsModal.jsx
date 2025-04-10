@@ -1,132 +1,137 @@
-// DonorSelection.jsx
-import React, { useState, useEffect, useCallback } from "react";
-import axios from "axios";
+// AddDonorsModal.jsx
+import React, { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/toast";
+import { Card, CardContent } from "@/components/ui/card";
 
-import DonorFilters from "@/components/DonorFilters";
-import DonorList from "@/components/DonorList";
+import DonorSelection from "@/components/DonorSelection";
+import CurrentDonorsList from "@/components/CurrentDonorsList";
 
-export default function DonorSelection({ selectedDonors, onChange }) {
+export default function AddDonorsModal({ isOpen, onClose, onAddDonors, existingDonors = [] }) {
   const { toast } = useToast();
-  const [searchTerm, setSearchTerm] = useState("");
-  const [activeFilters, setActiveFilters] = useState({});
-  const [availableFilters, setAvailableFilters] = useState({});
-  const [filteredDonors, setFilteredDonors] = useState([]);
-  const [targetDonorCount, setTargetDonorCount] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [showDonors, setShowDonors] = useState(false);
-
-  const fetchDonors = useCallback(async () => {
-    try {
-      setLoading(true);
-      const response = await axios.get("/api/donor/recommend", {
-        params: {
-          count: targetDonorCount || 20,
-          search: searchTerm,
-          ...activeFilters,
-          excludeIds: selectedDonors.map((d) => d.id).join(","),
-        },
-      });
-      setFilteredDonors(response.data.recommended || []);
-      setAvailableFilters(response.data.filters || {});
-    } catch (error) {
-      toast({ title: "Error", description: "Failed to fetch donors", variant: "destructive" });
-    } finally {
-      setLoading(false);
-    }
-  }, [searchTerm, activeFilters, targetDonorCount, selectedDonors]);
+  const [selectedDonors, setSelectedDonors] = useState([]);
+  const [removedExistingDonors, setRemovedExistingDonors] = useState([]);
 
   useEffect(() => {
-    if (showDonors) fetchDonors();
-  }, [fetchDonors, showDonors]);
-
-  const toggleDonor = (donor) => {
-    const isSelected = selectedDonors.some((d) => d.id === donor.id);
-    if (isSelected) {
-      onChange(selectedDonors.filter((d) => d.id !== donor.id));
-    } else {
-      onChange([...selectedDonors, { ...donor, status: "invited" }]);
-      setFilteredDonors((prev) => prev.filter((d) => d.id !== donor.id));
+    if (isOpen) {
+      setSelectedDonors([]);
+      setRemovedExistingDonors([]);
     }
+  }, [isOpen]);
+
+  const removeDonor = (donorId) => {
+    setSelectedDonors((prev) => prev.filter((d) => d.id !== donorId));
   };
 
-  const addAllDonors = () => {
-    if (!showDonors || filteredDonors.length === 0) {
-      toast({ title: "No donors to add", description: "Please recommend donors first", variant: "destructive" });
+  const removeExistingDonor = (donorId) => {
+    setRemovedExistingDonors((prev) => [...prev, donorId]);
+  };
+
+  const handleSubmit = () => {
+    const donorsToAdd = selectedDonors;
+    const donorsToRemove = removedExistingDonors;
+
+    if (donorsToAdd.length === 0 && donorsToRemove.length === 0) {
+      toast({
+        title: "No changes made",
+        description: "Please add or remove donors before submitting",
+        variant: "destructive",
+      });
       return;
     }
-    onChange([...selectedDonors, ...filteredDonors.map((d) => ({ ...d, status: "invited" }))]);
-    setFilteredDonors([]);
-    toast({ title: "All donors added", description: `Added ${filteredDonors.length} donors` });
+
+    onAddDonors(donorsToAdd, donorsToRemove);
+    onClose();
   };
 
+  const clearAll = () => {
+    setSelectedDonors([]);
+    setRemovedExistingDonors([]);
+    toast({ title: "Reset", description: "All changes have been cleared." });
+  };
+
+  const formattedExistingDonors = existingDonors
+    .map(donor => ({
+      ...donor,
+      isExisting: true,
+    }))
+    .filter(donor => !removedExistingDonors.includes(donor.id));
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Add Donors</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="mb-">
-          <Label htmlFor="search" className="block mb-3">Search Donors</Label>
-          <Input
-            id="search"
-            placeholder="Search donors..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="p-0 overflow-hidden flex flex-col max-h-[90vh]" style={{ width: '90vw', maxWidth: '1400px' }}>
+        <DialogHeader className="p-4 pb-2 border-b">
+          <DialogTitle className="text-xl font-bold">Add Donors to Event</DialogTitle>
+        </DialogHeader>
 
-        <div className="mb-5">
-          <DonorFilters
-            onFilterChange={setActiveFilters}
-            availableFilters={availableFilters}
-          />
-        </div>
-
-        <div className="flex items-end gap-3 mb-4">
-          <div className="flex-1">
-            <Label htmlFor="donorCount" className="block mb-1">Target Number of Donors</Label>
-            <Input
-              id="donorCount"
-              type="number"
-              value={targetDonorCount || ""}
-              onChange={(e) => setTargetDonorCount(Number(e.target.value) || null)}
+        <div className="p-4 pt-2 overflow-y-auto flex-grow">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <DonorSelection
+              selectedDonors={selectedDonors}
+              onChange={setSelectedDonors}
+              excludeDonors={[...selectedDonors, ...formattedExistingDonors]}
             />
-          </div>
-          <div className="flex gap-2 pt-6">
-            <Button
-              type="button"
-              onClick={() => {
-                setShowDonors(true);
-                fetchDonors();
-              }}
-              disabled={!targetDonorCount}
-            >
-              Recommend
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={addAllDonors}
-              disabled={!showDonors || filteredDonors.length === 0}
-            >
-              Add All
-            </Button>
+
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-base font-semibold">
+                  Selected Donors ({selectedDonors.length + formattedExistingDonors.length})
+                </h3>
+                {(selectedDonors.length > 0 || removedExistingDonors.length > 0) && (
+                  <Button type="button" variant="outline" size="sm" onClick={clearAll}>
+                    Reset Changes
+                  </Button>
+                )}
+              </div>
+
+              <Card>
+                <CardContent className="p-3">
+                  <CurrentDonorsList
+                    donors={[...selectedDonors, ...formattedExistingDonors]}
+                    onRemove={(donor) => {
+                      const id = typeof donor === 'object' ? donor.id : donor;
+                      if (existingDonors.find(d => d.id === id)) {
+                        removeExistingDonor(id);
+                      } else {
+                        removeDonor(id);
+                      }
+                    }}
+                  />
+
+                  {removedExistingDonors.length > 0 && (
+                    <div className="mt-4 text-sm text-red-500">
+                      {removedExistingDonors.length} donor(s) will be removed from the event
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
           </div>
         </div>
 
-        {showDonors && (
-          <DonorList
-            donors={filteredDonors}
-            onToggle={toggleDonor}
-            getActionIcon="add"
-          />
-        )}
-      </CardContent>
-    </Card>
+        <DialogFooter className="p-4 pt-2 border-t mt-auto">
+          <Button variant="outline" onClick={onClose} className="mr-2">
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleSubmit} 
+            disabled={selectedDonors.length === 0 && removedExistingDonors.length === 0}
+          >
+            {selectedDonors.length > 0 ? `Add ${selectedDonors.length} Donor(s)` : ""}
+            {selectedDonors.length > 0 && removedExistingDonors.length > 0 ? " & " : ""}
+            {removedExistingDonors.length > 0 ? `Remove ${removedExistingDonors.length} Donor(s)` : ""}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -104,28 +104,42 @@ export default function CreateEvent() {
           <CardTitle>Event Details</CardTitle>
           <CardDescription>Step 1 of 2: Enter basic event information</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <Label htmlFor="name">Name *</Label>
-          <Input id="name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required />
+        <CardContent>
+          <p className="text-sm text-muted-foreground italic mb-4">
+            Please fill out all fields marked with <span className="text-red-500">*</span>.
+          </p>
 
-          <Label htmlFor="description">Description</Label>
-          <Textarea id="description" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} />
+          <div className="mb-4">
+            <Label htmlFor="name" className="mb-1 block">Name <span className="text-red-500">*</span></Label>
+            <Input id="name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required />
+          </div>
 
-          <Label htmlFor="date">Date *</Label>
-          <Input type="date" id="date" value={formData.date} onChange={(e) => setFormData({ ...formData, date: e.target.value })} required />
+          <div className="mb-4">
+            <Label htmlFor="description" className="mb-1 block">Description</Label>
+            <Textarea id="description" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} />
+          </div>
 
-          <Label htmlFor="location">Location *</Label>
-          <Input id="location" value={formData.location} onChange={(e) => setFormData({ ...formData, location: e.target.value })} required />
+          <div className="mb-4">
+            <Label htmlFor="date" className="mb-1 block">Date <span className="text-red-500">*</span></Label>
+            <Input type="date" id="date" value={formData.date} onChange={(e) => setFormData({ ...formData, date: e.target.value })} required />
+          </div>
 
-          <Label>Status</Label>
-          <Select value={formData.status} onValueChange={(val) => setFormData({ ...formData, status: val })}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="draft">Draft</SelectItem>
-              <SelectItem value="published">Published</SelectItem>
-              <SelectItem value="archived">Archived</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="mb-4">
+            <Label htmlFor="location" className="mb-1 block">Location <span className="text-red-500">*</span></Label>
+            <Input id="location" value={formData.location} onChange={(e) => setFormData({ ...formData, location: e.target.value })} required />
+          </div>
+
+          <div className="mb-4">
+            <Label className="mb-1 block">Status</Label>
+            <Select value={formData.status} onValueChange={(val) => setFormData({ ...formData, status: val })}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="draft">Draft</SelectItem>
+                <SelectItem value="published">Published</SelectItem>
+                <SelectItem value="archived">Archived</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
           <Button type="button" className="w-full" onClick={goToNextStep}>Continue to Donor Selection</Button>
         </CardContent>
