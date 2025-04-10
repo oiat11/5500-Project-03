@@ -309,35 +309,33 @@ export default function Donors() {
         </div>
       </div>
 
-      <Card className="mb-6 w-full">
-        <CardContent className="pt-6">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1">
-              <Input
-                placeholder="Search donors..."
-                value={searchTerm}
-                onChange={handleSearchChange}
-                className="w-full"
-              />
-            </div>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                onClick={() => fetchDonors(1, searchTerm, activeFilters)}
-              >
-                Search
-              </Button>
-              <Button
-                variant="outline"
-                onClick={handleClearSearch}
-                disabled={!searchTerm}
-              >
-                Clear
-              </Button>
-            </div>
+      <div className="mb-6 w-full">
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex-1">
+            <Input
+              placeholder="Search donors..."
+              value={searchTerm}
+              onChange={handleSearchChange}
+              className="w-full"
+            />
           </div>
-        </CardContent>
-      </Card>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => fetchDonors(1, searchTerm, activeFilters)}
+            >
+              Search
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleClearSearch}
+              disabled={!searchTerm}
+            >
+              Clear
+            </Button>
+          </div>
+        </div>
+      </div>
 
       <DonorFilters
         onFilterChange={handleFilterChange}
