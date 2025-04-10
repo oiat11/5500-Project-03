@@ -282,338 +282,340 @@ const DonorFilters = ({ onFilterChange, availableFilters = {} }) => {
   ];
 
   return (
-    <Card className="mb-6">
-      <CardContent className="pt-6">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-semibold">Filters</h3>
-          <Button
-            variant="ghost"
-            onClick={() => setExpanded(!expanded)}
-            className="flex items-center gap-1"
-          >
-            {expanded ? (
-              <>
-                <span>Collapse</span>
-                <ChevronUp className="h-4 w-4" />
-              </>
-            ) : (
-              <>
-                <span>Expand</span>
-                <ChevronDown className="h-4 w-4" />
-              </>
-            )}
-          </Button>
-        </div>
-
-        {expanded && (
-          <div className="space-y-4">
-            <div className="flex justify-end mb-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={clearAllFilters}
-              >
-                Clear All
-              </Button>
-            </div>
-            
-            {/* Basic Filters */}
-            <div className="flex flex-col gap-4 mb-4">
-              {/* Total Donations Amount Filter */}
-              <div>
-                <Label htmlFor="minDonationAmount" className="mb-1">Total Donation Amount</Label>
-                <div className="flex items-center gap-2">
-                  <span>$</span>
-                  <Input
-                    placeholder="Min"
-                    name="minDonationAmount"
-                    value={filters.minDonationAmount}
-                    onChange={handleInputChange}
-                    className="w-24"
-                  />
-                  <span>-</span>
-                  <span>$</span>
-                  <Input
-                    placeholder="Max"
-                    name="maxDonationAmount"
-                    value={filters.maxDonationAmount}
-                    onChange={handleInputChange}
-                    className="w-24"
-                  />
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => {
-                      handleClearFilter('minDonationAmount');
-                      handleClearFilter('maxDonationAmount');
-                    }}
-                  >
-                    Clear
-                  </Button>
-                </div>
-              </div>
-            </div>
-
-            {/* Advanced Filters */}
-            <div className="flex flex-col gap-4 border-t pt-4">
-              {/* Largest Gift Appeal Filter */}
-              <div>
-                <Label htmlFor="largestGiftAppeal" className="mb-1">Largest Gift Appeal</Label>
-                <div className="flex flex-col gap-2">
-                  <div className="flex gap-2">
-                    <select
-                      id="largestGiftAppeal"
-                      onChange={handleLargestGiftAppealSelect}
-                      value=""
-                      className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      <option value="">Select an appeal...</option>
-                      {largestGiftAppealOptions
-                        .filter(option => option.value && !filters.largestGiftAppeal.includes(option.value))
-                        .map(option => (
-                          <option key={option.value} value={option.value}>{option.label}</option>
-                        ))}
-                    </select>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleClearFilter('largestGiftAppeal')}
-                    >
-                      Clear
-                    </Button>
-                  </div>
-                  
-                  {/* Display selected appeals */}
-                  {filters.largestGiftAppeal.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      {filters.largestGiftAppeal.map(appeal => {
-                        const option = largestGiftAppealOptions.find(opt => opt.value === appeal);
-                        return (
-                          <span 
-                            key={appeal} 
-                            className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
-                          >
-                            {option ? option.label : appeal}
-                            <button 
-                              type="button"
-                              className="ml-1 text-blue-500 hover:text-blue-800 focus:outline-none"
-                              onClick={() => handleRemoveLargestGiftAppeal(appeal)}
-                            >
-                              ×
-                            </button>
-                          </span>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* City Filter */}
-              <div>
-                <Label htmlFor="cities" className="mb-1">Cities</Label>
-                <div className="flex flex-col gap-2">
-                  <div className="flex gap-2">
-                    <select
-                      id="cities"
-                      onChange={handleCitySelect}
-                      value=""
-                      className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      <option value="">Select cities...</option>
-                      {availableCities
-                        .filter(city => !filters.cities.includes(city))
-                        .map(city => (
-                          <option key={city} value={city}>
-                            {city.replace(/_/g, ' ')}
-                          </option>
-                        ))}
-                    </select>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleClearFilter('cities')}
-                    >
-                      Clear
-                    </Button>
-                  </div>
-                  
-                  {/* Display selected cities */}
-                  {filters.cities.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      {filters.cities.map(city => (
-                        <span 
-                          key={city} 
-                          className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
-                        >
-                          {city.replace(/_/g, ' ')}
-                          <button 
-                            type="button"
-                            className="ml-1 text-blue-500 hover:text-blue-800 focus:outline-none"
-                            onClick={() => handleRemoveCity(city)}
-                          >
-                            ×
-                          </button>
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Contact Phone Type Filter */}
-              <div>
-                <Label htmlFor="contactPhoneType" className="mb-1">Contact Phone Type</Label>
-                <div className="flex flex-wrap gap-2">
-                  {phoneTypeOptions.map(option => (
-                    <Button
-                      key={option.value}
-                      size="sm"
-                      variant={filters.contactPhoneType === option.value || (option.value === 'all' && !filters.contactPhoneType) ? "default" : "outline"}
-                      onClick={() => handlePhoneTypeSelect(option.value)}
-                    >
-                      {option.label}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Phone Restrictions Filter */}
-              <div>
-                <Label htmlFor="phoneRestrictions" className="mb-1">Phone Restrictions</Label>
-                <div className="flex flex-col gap-2">
-                  <div className="flex gap-2">
-                    <select
-                      id="phoneRestrictions"
-                      onChange={handlePhoneRestrictionSelect}
-                      value=""
-                      className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      <option value="">Select restrictions...</option>
-                      {phoneRestrictionsOptions
-                        .filter(option => option.value && !filters.phoneRestrictions.includes(option.value))
-                        .map(option => (
-                          <option key={option.value} value={option.value}>{option.label}</option>
-                        ))}
-                    </select>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleClearFilter('phoneRestrictions')}
-                    >
-                      Clear
-                    </Button>
-                  </div>
-                  
-                  {/* Display selected phone restrictions */}
-                  {filters.phoneRestrictions.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      {filters.phoneRestrictions.map(restriction => {
-                        const option = phoneRestrictionsOptions.find(opt => opt.value === restriction);
-                        return (
-                          <span 
-                            key={restriction} 
-                            className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
-                          >
-                            {option ? option.label : restriction}
-                            <button 
-                              type="button"
-                              className="ml-1 text-blue-500 hover:text-blue-800 focus:outline-none"
-                              onClick={() => handleRemovePhoneRestriction(restriction)}
-                            >
-                              ×
-                            </button>
-                          </span>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Email Restrictions Filter */}
-              <div>
-                <Label htmlFor="emailRestrictions" className="mb-1">Email Restrictions</Label>
-                <div className="flex flex-col gap-2">
-                  <div className="flex gap-2">
-                    <select
-                      id="emailRestrictions"
-                      onChange={handleEmailRestrictionSelect}
-                      value=""
-                      className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      <option value="">Select restrictions...</option>
-                      {emailRestrictionsOptions
-                        .filter(option => option.value && !filters.emailRestrictions.includes(option.value))
-                        .map(option => (
-                          <option key={option.value} value={option.value}>{option.label}</option>
-                        ))}
-                    </select>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleClearFilter('emailRestrictions')}
-                    >
-                      Clear
-                    </Button>
-                  </div>
-                  
-                  {/* Display selected email restrictions */}
-                  {filters.emailRestrictions.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      {filters.emailRestrictions.map(restriction => {
-                        const option = emailRestrictionsOptions.find(opt => opt.value === restriction);
-                        return (
-                          <span 
-                            key={restriction} 
-                            className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
-                          >
-                            {option ? option.label : restriction}
-                            <button 
-                              type="button"
-                              className="ml-1 text-blue-500 hover:text-blue-800 focus:outline-none"
-                              onClick={() => handleRemoveEmailRestriction(restriction)}
-                            >
-                              ×
-                            </button>
-                          </span>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Donor Tags Filter - Using MultiSelect */}
-              <div>
-                <Label htmlFor="tags" className="mb-1">Donor Tags</Label>
-                <div className="flex flex-col gap-2">
-                  <div className="flex gap-2">
-                    <div className="w-full">
-                      <MultiSelect
-                        id="tags"
-                        isLoading={loadingTags}
-                        options={tagOptions}
-                        value={filters.tags}
-                        onChange={handleTagsChange}
-                        placeholder="Select tags..."
-                      />
-                    </div>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleClearFilter('tags')}
-                    >
-                      Clear
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </div>
+    <div className="mb-6 w-full">
+      <Card className="px-4 py-2 border-0 shadow-sm">
+        <CardContent className="p-2">
+          <div className="flex justify-between items-center">
+            <h3 className="text-lg font-semibold">Filters</h3>
+            <Button
+              variant="ghost"
+              onClick={() => setExpanded(!expanded)}
+              className="flex items-center gap-1"
+            >
+              {expanded ? (
+                <>
+                  <span>Collapse</span>
+                  <ChevronUp className="h-4 w-4" />
+                </>
+              ) : (
+                <>
+                  <span>Expand</span>
+                  <ChevronDown className="h-4 w-4" />
+                </>
+              )}
+            </Button>
           </div>
-        )}
-      </CardContent>
-    </Card>
+
+          {expanded && (
+            <div className="space-y-4 mt-4">
+              <div className="flex justify-end mb-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={clearAllFilters}
+                >
+                  Clear All
+                </Button>
+              </div>
+              
+              {/* Basic Filters */}
+              <div className="flex flex-col gap-4 mb-4">
+                {/* Total Donations Amount Filter */}
+                <div>
+                  <Label htmlFor="minDonationAmount" className="mb-1">Total Donation Amount</Label>
+                  <div className="flex items-center gap-2">
+                    <span>$</span>
+                    <Input
+                      placeholder="Min"
+                      name="minDonationAmount"
+                      value={filters.minDonationAmount}
+                      onChange={handleInputChange}
+                      className="w-24"
+                    />
+                    <span>-</span>
+                    <span>$</span>
+                    <Input
+                      placeholder="Max"
+                      name="maxDonationAmount"
+                      value={filters.maxDonationAmount}
+                      onChange={handleInputChange}
+                      className="w-24"
+                    />
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        handleClearFilter('minDonationAmount');
+                        handleClearFilter('maxDonationAmount');
+                      }}
+                    >
+                      Clear
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Advanced Filters */}
+              <div className="flex flex-col gap-4 border-t pt-4">
+                {/* Largest Gift Appeal Filter */}
+                <div>
+                  <Label htmlFor="largestGiftAppeal" className="mb-1">Largest Gift Appeal</Label>
+                  <div className="flex flex-col gap-2">
+                    <div className="flex gap-2">
+                      <select
+                        id="largestGiftAppeal"
+                        onChange={handleLargestGiftAppealSelect}
+                        value=""
+                        className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <option value="">Select an appeal...</option>
+                        {largestGiftAppealOptions
+                          .filter(option => option.value && !filters.largestGiftAppeal.includes(option.value))
+                          .map(option => (
+                            <option key={option.value} value={option.value}>{option.label}</option>
+                          ))}
+                      </select>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleClearFilter('largestGiftAppeal')}
+                      >
+                        Clear
+                      </Button>
+                    </div>
+                    
+                    {/* Display selected appeals */}
+                    {filters.largestGiftAppeal.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {filters.largestGiftAppeal.map(appeal => {
+                          const option = largestGiftAppealOptions.find(opt => opt.value === appeal);
+                          return (
+                            <span 
+                              key={appeal} 
+                              className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+                            >
+                              {option ? option.label : appeal}
+                              <button 
+                                type="button"
+                                className="ml-1 text-blue-500 hover:text-blue-800 focus:outline-none"
+                                onClick={() => handleRemoveLargestGiftAppeal(appeal)}
+                              >
+                                ×
+                              </button>
+                            </span>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* City Filter */}
+                <div>
+                  <Label htmlFor="cities" className="mb-1">Cities</Label>
+                  <div className="flex flex-col gap-2">
+                    <div className="flex gap-2">
+                      <select
+                        id="cities"
+                        onChange={handleCitySelect}
+                        value=""
+                        className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <option value="">Select cities...</option>
+                        {availableCities
+                          .filter(city => !filters.cities.includes(city))
+                          .map(city => (
+                            <option key={city} value={city}>
+                              {city.replace(/_/g, ' ')}
+                            </option>
+                          ))}
+                      </select>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleClearFilter('cities')}
+                      >
+                        Clear
+                      </Button>
+                    </div>
+                    
+                    {/* Display selected cities */}
+                    {filters.cities.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {filters.cities.map(city => (
+                          <span 
+                            key={city} 
+                            className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+                          >
+                            {city.replace(/_/g, ' ')}
+                            <button 
+                              type="button"
+                              className="ml-1 text-blue-500 hover:text-blue-800 focus:outline-none"
+                              onClick={() => handleRemoveCity(city)}
+                            >
+                              ×
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Contact Phone Type Filter */}
+                <div>
+                  <Label htmlFor="contactPhoneType" className="mb-1">Contact Phone Type</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {phoneTypeOptions.map(option => (
+                      <Button
+                        key={option.value}
+                        size="sm"
+                        variant={filters.contactPhoneType === option.value || (option.value === 'all' && !filters.contactPhoneType) ? "default" : "outline"}
+                        onClick={() => handlePhoneTypeSelect(option.value)}
+                      >
+                        {option.label}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Phone Restrictions Filter */}
+                <div>
+                  <Label htmlFor="phoneRestrictions" className="mb-1">Phone Restrictions</Label>
+                  <div className="flex flex-col gap-2">
+                    <div className="flex gap-2">
+                      <select
+                        id="phoneRestrictions"
+                        onChange={handlePhoneRestrictionSelect}
+                        value=""
+                        className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <option value="">Select restrictions...</option>
+                        {phoneRestrictionsOptions
+                          .filter(option => option.value && !filters.phoneRestrictions.includes(option.value))
+                          .map(option => (
+                            <option key={option.value} value={option.value}>{option.label}</option>
+                          ))}
+                      </select>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleClearFilter('phoneRestrictions')}
+                      >
+                        Clear
+                      </Button>
+                    </div>
+                    
+                    {/* Display selected phone restrictions */}
+                    {filters.phoneRestrictions.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {filters.phoneRestrictions.map(restriction => {
+                          const option = phoneRestrictionsOptions.find(opt => opt.value === restriction);
+                          return (
+                            <span 
+                              key={restriction} 
+                              className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+                            >
+                              {option ? option.label : restriction}
+                              <button 
+                                type="button"
+                                className="ml-1 text-blue-500 hover:text-blue-800 focus:outline-none"
+                                onClick={() => handleRemovePhoneRestriction(restriction)}
+                              >
+                                ×
+                              </button>
+                            </span>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Email Restrictions Filter */}
+                <div>
+                  <Label htmlFor="emailRestrictions" className="mb-1">Email Restrictions</Label>
+                  <div className="flex flex-col gap-2">
+                    <div className="flex gap-2">
+                      <select
+                        id="emailRestrictions"
+                        onChange={handleEmailRestrictionSelect}
+                        value=""
+                        className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <option value="">Select restrictions...</option>
+                        {emailRestrictionsOptions
+                          .filter(option => option.value && !filters.emailRestrictions.includes(option.value))
+                          .map(option => (
+                            <option key={option.value} value={option.value}>{option.label}</option>
+                          ))}
+                      </select>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleClearFilter('emailRestrictions')}
+                      >
+                        Clear
+                      </Button>
+                    </div>
+                    
+                    {/* Display selected email restrictions */}
+                    {filters.emailRestrictions.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {filters.emailRestrictions.map(restriction => {
+                          const option = emailRestrictionsOptions.find(opt => opt.value === restriction);
+                          return (
+                            <span 
+                              key={restriction} 
+                              className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+                            >
+                              {option ? option.label : restriction}
+                              <button 
+                                type="button"
+                                className="ml-1 text-blue-500 hover:text-blue-800 focus:outline-none"
+                                onClick={() => handleRemoveEmailRestriction(restriction)}
+                              >
+                                ×
+                              </button>
+                            </span>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Donor Tags Filter - Using MultiSelect */}
+                <div>
+                  <Label htmlFor="tags" className="mb-1">Donor Tags</Label>
+                  <div className="flex flex-col gap-2">
+                    <div className="flex gap-2">
+                      <div className="w-full">
+                        <MultiSelect
+                          id="tags"
+                          isLoading={loadingTags}
+                          options={tagOptions}
+                          value={filters.tags}
+                          onChange={handleTagsChange}
+                          placeholder="Select tags..."
+                        />
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleClearFilter('tags')}
+                      >
+                        Clear
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 };
 
