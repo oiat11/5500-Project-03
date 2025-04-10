@@ -23,7 +23,6 @@ const DonorFilters = ({ onFilterChange, availableFilters = {} }) => {
   const [availableCities, setAvailableCities] = useState([]);
   const [tagOptions, setTagOptions] = useState([]);
   const [loadingTags, setLoadingTags] = useState(false);
-  console.log("Filter Cities:", filters.cities);
 
   useEffect(() => {
     const fetchCities = async () => {

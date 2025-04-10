@@ -201,8 +201,6 @@ export const getDonors = async (req, res, next) => {
       emailRestrictions,
       communicationRestrictions
     } = req.query;
-    console.log("Received filters:", req.query);
-    console.log("City:", req.query.city);
 
     const pageNum = parseInt(page);
     const limitNum = parseInt(limit);
@@ -672,48 +670,114 @@ export const getAvailableCities = async (req, res, next) => {
   }
 };
 
-export const recommendDonors = async (req, res) => {
+// routes/donor.js or similar
+export const recommendDonors = async (req, res, next) => {
   try {
-    console.log('Recommend endpoint hit in controller');
+    if (!req.user) return next(errorHandler(401, 'Unauthorized: Please log in'));
 
-    const recommendations = await prisma.donor.findMany({
-      where: { 
-        is_deleted: false 
-      },
-      take: 10,
-      orderBy: {
-        created_at: 'desc'
-      }
-    });
-    
-    const scoredDonors = donorsWithTags.map(donor => {
-      const matchingTagCount = donor.tags.filter(t => 
-        tagIds.includes(t.tag_id)
-      ).length;
-      
-      return {
-        donor,
-        score: matchingTagCount + (donor.total_donation_amount / 10000 || 0)
+    const {
+      count = 20,
+      excludeIds,
+      eventId,
+      minDonationAmount,
+      maxDonationAmount,
+      city,
+      tags,
+      search, // ✅ optional
+    } = req.query;
+
+    console.log("📥 recommendDonors req.query:", req.query);
+
+    const take = parseInt(count);
+    const excludeIdArray = excludeIds
+      ? excludeIds
+          .split(',')
+          .map(id => id.trim())
+          .filter(id => id !== "")
+      : [];
+
+    // Base where clause
+    let whereClause = {
+      is_deleted: false,
+    };
+
+    // Exclude selected donors
+    if (excludeIdArray.length > 0) {
+      whereClause.id = { notIn: excludeIdArray };
+    }
+
+    // Exclude donors already in the event
+    if (eventId) {
+      whereClause.events = {
+        none: {
+          event_id: parseInt(eventId),
+        },
       };
+    }
+
+    // City filter
+    if (city) {
+      const cities = typeof city === 'string' ? city.split(',') : city;
+      whereClause.city = { in: cities };
+    }
+
+    // Donation amount filter
+    if (minDonationAmount || maxDonationAmount) {
+      whereClause.total_donation_amount = {};
+      if (minDonationAmount !== undefined) {
+        whereClause.total_donation_amount.gte = parseFloat(minDonationAmount);
+      }
+      if (maxDonationAmount !== undefined) {
+        whereClause.total_donation_amount.lte = parseFloat(maxDonationAmount);
+      }
+    }
+
+    // ✅ Add name search
+    if (search) {
+      whereClause.OR = [
+        { first_name: { contains: search } },
+        { last_name: { contains: search } },
+      ];
+    }
+
+    // Tags filter
+    const tagsFilter = tags
+      ? {
+          tags: {
+            some: {
+              tag: {
+                name: {
+                  in: Array.isArray(tags) ? tags : [tags],
+                },
+              },
+            },
+          },
+        }
+      : {};
+
+    const finalWhere = {
+      ...whereClause,
+      ...tagsFilter,
+    };
+
+    const recommendedDonors = await prisma.donor.findMany({
+      where: finalWhere,
+      include: {
+        tags: { include: { tag: true } },
+        events: true,
+      },
+      orderBy: {
+        total_donation_amount: 'desc',
+      },
+      take,
     });
-    
-    const recommendedDonors = scoredDonors
-      .sort((a, b) => b.score - a.score)
-      .slice(0, count)
-      .map(item => ({
-        value: item.donor.id,
-        label: item.donor.organization_name || `${item.donor.first_name} ${item.donor.last_name}`,
-        tags: item.donor.tags.map(t => t.tag),
-        totalDonation: item.donor.total_donation_amount || 0,
-        city: item.donor.city
-      }));
-    
-    res.status(200).json({ donors: recommendedDonors });
+
+    res.status(200).json({
+      recommended: recommendedDonors,
+    });
+
   } catch (error) {
-    console.error('Error in recommendDonors:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to get recommendations'
-    });
+    console.error("❌ recommendDonors error:", error);
+    next(error);
   }
 };
