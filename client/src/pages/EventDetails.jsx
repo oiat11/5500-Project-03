@@ -422,147 +422,123 @@ export default function EventDetails() {
                 ) : (
                   <ScrollArea className="h-[400px]">
                     <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Name</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Donation Amount</TableHead>
-                          <TableHead>City</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {event.donors.map((donorEvent) => (
-                          <TableRow
-                            key={donorEvent.donor_id}
-                            className="hover:bg-slate-50"
-                          >
-                            <TableCell
-                              className="font-medium cursor-pointer"
-                              onClick={() =>
-                                navigate(`/donors/${donorEvent.donor_id}`)
-                              }
-                            >
-                              {`${donorEvent.donor.first_name} ${donorEvent.donor.last_name}`}
+<TableHeader>
+  <TableRow>
+    <TableHead className="w-[30%]">Name</TableHead>
+    <TableHead className="w-[20%]">Donation Amount</TableHead>
+    <TableHead className="w-[15%]">City</TableHead>
+    <TableHead className="w-[40%]">Status</TableHead>
+  </TableRow>
+</TableHeader>
 
-                              {/* Check for tags with more flexible conditions */}
-                              {donorEvent.donor.tags &&
-                                donorEvent.donor.tags.length > 0 && (
-                                  <div className="flex flex-wrap gap-1 mt-1">
-                                    {donorEvent.donor.tags.map(
-                                      (tagItem, index) => {
-                                        // Handle different possible tag structures
-                                        const tag = tagItem.tag || tagItem;
-                                        const tagId =
-                                          tag.id || tagItem.tag_id || index;
-                                        const tagName = tag.name || "";
-                                        const tagColor = tag.color || "#6366f1";
+<TableBody>
+  {event.donors.map((donorEvent) => (
+    <TableRow
+      key={donorEvent.donor_id}
+      className="hover:bg-slate-50"
+    >
+      <TableCell
+        className="font-medium cursor-pointer w-[30%]"
+        onClick={() => navigate(`/donors/${donorEvent.donor_id}`)}
+      >
+        {`${donorEvent.donor.first_name} ${donorEvent.donor.last_name}`}
+        {donorEvent.donor.tags && donorEvent.donor.tags.length > 0 && (
+          <div className="flex flex-wrap gap-1 mt-1">
+            {donorEvent.donor.tags.map((tagItem, index) => {
+              const tag = tagItem.tag || tagItem;
+              const tagId = tag.id || tagItem.tag_id || index;
+              const tagName = tag.name || "";
+              const tagColor = tag.color || "#6366f1";
 
-                                        return (
-                                          <div
-                                            key={tagId}
-                                            className="px-2 py-0.5 rounded-full text-xs font-medium"
-                                            style={{
-                                              backgroundColor: tagColor,
-                                              color: getContrastColor(tagColor),
-                                            }}
-                                          >
-                                            {tagName}
-                                          </div>
-                                        );
-                                      }
-                                    )}
-                                  </div>
-                                )}
-                            </TableCell>
-                            <TableCell onClick={(e) => e.stopPropagation()}>
-                              <Select
-                                value={donorEvent.status}
-                                onValueChange={(value) =>
-                                  handleDonorStatusChange(
-                                    donorEvent.donor_id,
-                                    value
-                                  )
-                                }
-                                disabled={!isEventOwner}
-                              >
-                                <SelectTrigger className="w-[130px]">
-                                  <SelectValue>
-                                    {donorEvent.status === "invited" && (
-                                      <span className="flex items-center">
-                                        <span className="h-2 w-2 rounded-full bg-blue-500 mr-2"></span>
-                                        Invited
-                                      </span>
-                                    )}
-                                    {donorEvent.status === "confirmed" && (
-                                      <span className="flex items-center">
-                                        <span className="h-2 w-2 rounded-full bg-green-500 mr-2"></span>
-                                        Confirmed
-                                      </span>
-                                    )}
-                                    {donorEvent.status === "declined" && (
-                                      <span className="flex items-center">
-                                        <span className="h-2 w-2 rounded-full bg-red-500 mr-2"></span>
-                                        Declined
-                                      </span>
-                                    )}
-                                  </SelectValue>
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem
-                                    value="invited"
-                                    className="text-blue-600"
-                                  >
-                                    <span className="flex items-center">
-                                      <span className="h-2 w-2 rounded-full bg-blue-500 mr-2"></span>
-                                      Invited
-                                    </span>
-                                  </SelectItem>
-                                  <SelectItem
-                                    value="confirmed"
-                                    className="text-green-600"
-                                  >
-                                    <span className="flex items-center">
-                                      <span className="h-2 w-2 rounded-full bg-green-500 mr-2"></span>
-                                      Confirmed
-                                    </span>
-                                  </SelectItem>
-                                  <SelectItem
-                                    value="declined"
-                                    className="text-red-600"
-                                  >
-                                    <span className="flex items-center">
-                                      <span className="h-2 w-2 rounded-full bg-red-500 mr-2"></span>
-                                      Declined
-                                    </span>
-                                  </SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </TableCell>
-                            <TableCell
-                              className="cursor-pointer"
-                              onClick={() =>
-                                navigate(`/donors/${donorEvent.donor_id}`)
-                              }
-                            >
-                              {donorEvent.donor.total_donation_amount
-                                ? `$${parseFloat(
-                                    donorEvent.donor.total_donation_amount
-                                  ).toLocaleString()}`
-                                : "$0"}
-                            </TableCell>
-                            <TableCell
-                              className="cursor-pointer"
-                              onClick={() =>
-                                navigate(`/donors/${donorEvent.donor_id}`)
-                              }
-                            >
-                              {donorEvent.donor.city
-                                ? donorEvent.donor.city.replace(/_/g, " ")
-                                : "N/A"}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
+              return (
+                <div
+                  key={tagId}
+                  className="px-2 py-0.5 rounded-full text-xs font-medium"
+                  style={{
+                    backgroundColor: tagColor,
+                    color: getContrastColor(tagColor),
+                  }}
+                >
+                  {tagName}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </TableCell>
+      <TableCell
+        className="cursor-pointer w-[20%]"
+        onClick={() => navigate(`/donors/${donorEvent.donor_id}`)}
+      >
+        {donorEvent.donor.total_donation_amount
+          ? `$${parseFloat(donorEvent.donor.total_donation_amount).toLocaleString()}`
+          : "$0"}
+      </TableCell>
+      <TableCell
+        className="cursor-pointer w-[15%]"
+        onClick={() => navigate(`/donors/${donorEvent.donor_id}`)}
+      >
+        {donorEvent.donor.city
+          ? donorEvent.donor.city.replace(/_/g, " ")
+          : "N/A"}
+      </TableCell>
+      <TableCell className="w-[40%] " onClick={(e) => e.stopPropagation()}>
+        <div className="inline-block">
+          <Select
+            value={donorEvent.status}
+            onValueChange={(value) => handleDonorStatusChange(donorEvent.donor_id, value)}
+            disabled={!isEventOwner}
+          >
+            <SelectTrigger className="w-[140px]">
+              <SelectValue>
+                {donorEvent.status === "invited" && (
+                  <span className="flex items-center">
+                    <span className="h-2 w-2 rounded-full bg-blue-500 mr-2"></span>
+                    Invited
+                  </span>
+                )}
+                {donorEvent.status === "confirmed" && (
+                  <span className="flex items-center">
+                    <span className="h-2 w-2 rounded-full bg-green-500 mr-2"></span>
+                    Confirmed
+                  </span>
+                )}
+                {donorEvent.status === "declined" && (
+                  <span className="flex items-center">
+                    <span className="h-2 w-2 rounded-full bg-red-500 mr-2"></span>
+                    Declined
+                  </span>
+                )}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="invited" className="text-blue-600">
+                <span className="flex items-center">
+                  <span className="h-2 w-2 rounded-full bg-blue-500 mr-2"></span>
+                  Invited
+                </span>
+              </SelectItem>
+              <SelectItem value="confirmed" className="text-green-600">
+                <span className="flex items-center">
+                  <span className="h-2 w-2 rounded-full bg-green-500 mr-2"></span>
+                  Confirmed
+                </span>
+              </SelectItem>
+              <SelectItem value="declined" className="text-red-600">
+                <span className="flex items-center">
+                  <span className="h-2 w-2 rounded-full bg-red-500 mr-2"></span>
+                  Declined
+                </span>
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </TableCell>
+    </TableRow>
+  ))}
+</TableBody>
+
+
                     </Table>
                   </ScrollArea>
                 )}
