@@ -207,9 +207,9 @@ const DonorFilters = ({ onFilterChange, availableFilters = {} }) => {
   ];
 
   return (
-    <Card className="mb-6">
-      <CardContent className="pt-6">
-        <div className="flex justify-between items-center mb-4">
+    <Card className={`mb-5 ${expanded ? '' : 'compact'}`}>
+      <CardContent className={expanded ? "pt-5" : "py-1"}>
+        <div className="flex justify-between items-center">
           <h3 className="text-lg font-semibold">Filters</h3>
           <Button
             variant="ghost"
@@ -231,7 +231,7 @@ const DonorFilters = ({ onFilterChange, availableFilters = {} }) => {
         </div>
 
         {expanded && (
-          <div className="space-y-4">
+          <div className="space-y-4 mt-4">
             <div className="flex justify-end mb-2">
               <Button
                 variant="outline"

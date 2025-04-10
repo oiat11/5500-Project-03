@@ -6,7 +6,7 @@ import { UserPlus, UserMinus } from "lucide-react";
 
 export default function DonorSelection({ donors, selectedDonors, onToggle }) {
   return (
-    <ScrollArea className="h-[300px] border rounded-md">
+    <ScrollArea className="h-[650px] border rounded-md">
       <div className="p-2 space-y-1">
         {donors.length === 0 ? (
           <div className="text-muted-foreground p-4 text-center">No donors match your filters. Try adjusting your filters to see more results.</div>

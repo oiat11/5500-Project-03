@@ -10,7 +10,7 @@ export default function CurrentDonorsList({ donors, onStatusChange, onRemove }) 
   return (
     <div className="h-full flex flex-col">
       <Card className="flex-1 border border-muted">
-        <ScrollArea className="h-[400px]">
+        <ScrollArea className="h-[800px]">
           {donors.length > 0 ? (
             <div className="p-2 space-y-1">
               {donors.map((donor) => (

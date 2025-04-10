@@ -223,10 +223,9 @@ export default function AddDonorsModal({
               <h3 className="text-base font-semibold mb-3">Find Donors</h3>
 
               <div className="mb-4">
-                <Label htmlFor="search" className="mb-1 block">Search donors</Label>
                 <Input
                   id="search"
-                  placeholder="Search by name, email, or organization..."
+                  placeholder="Search donors"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full"
@@ -234,15 +233,10 @@ export default function AddDonorsModal({
               </div>
 
               <div className="mb-4">
-                <h4 className="text-sm font-medium mb-1">Filters</h4>
-                <Card>
-                  <CardContent className="p-3">
-                    <DonorFilters
-                      onFilterChange={handleFilterChange}
-                      availableFilters={availableFilters}
-                    />
-                  </CardContent>
-                </Card>
+                <DonorFilters
+                  onFilterChange={handleFilterChange}
+                  availableFilters={availableFilters}
+                />
               </div>
 
               <div className="mb-4">
