@@ -3,10 +3,9 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { UserMinus } from "lucide-react";
 
-export default function CurrentDonorsList({ donors, onStatusChange, onRemove }) {
+export default function CurrentDonorsList({ donors, onRemove }) {
   return (
     <div className="h-full flex flex-col">
       <Card className="flex-1 border border-muted">
@@ -55,28 +54,13 @@ export default function CurrentDonorsList({ donors, onStatusChange, onRemove }) 
                       </div>
                     )}
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Select
-                      value={donor.status}
-                      onValueChange={(value) => onStatusChange(donor.id || donor.value, value)}
-                    >
-                      <SelectTrigger className="w-32">
-                        <SelectValue placeholder="Status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="invited">Invited</SelectItem>
-                        <SelectItem value="confirmed">Confirmed</SelectItem>
-                        <SelectItem value="declined">Declined</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => onRemove(donor.id || donor.value)}
-                    >
-                      <UserMinus className="h-4 w-4" />
-                    </Button>
-                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => onRemove(donor.id || donor.value)}
+                  >
+                    <UserMinus className="h-4 w-4" />
+                  </Button>
                 </div>
               ))}
             </div>

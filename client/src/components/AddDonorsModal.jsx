@@ -198,7 +198,6 @@ export default function AddDonorsModal({
         <CurrentDonorsList
           donors={allSelectedDonors}
           onRemove={(donor) => donor.isExisting ? removeExistingDonor(donor.id) : removeDonor(donor.id)}
-          onStatusChange={handleDonorStatusChange}
         />
 
         {removedExistingDonors.length > 0 && (

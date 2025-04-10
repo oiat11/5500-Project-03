@@ -479,7 +479,6 @@ export default function CreateEvent() {
             <CurrentDonorsList
               donors={formData.donors}
               onRemove={removeDonor}
-              onStatusChange={handleDonorStatusChange}
             />
           </CardContent>
         </Card>
