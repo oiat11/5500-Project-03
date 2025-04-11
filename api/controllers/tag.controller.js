@@ -86,14 +86,26 @@ export const deleteTag = async (req, res, next) => {
   const { id } = req.params;
 
   try {
+    // 查找标签
     const existingTag = await prisma.tag.findUnique({
       where: { id },
     });
 
-    if (!existingTag || existingTag.is_deleted) {
-      return next(errorHandler(404, "Tag not found."));
+    if (!existingTag) {
+      return res.status(404).json({
+        success: false,
+        message: "Tag not found."
+      });
     }
 
+    if (existingTag.is_deleted) {
+      return res.status(200).json({
+        success: true,
+        message: "Tag was already deleted",
+      });
+    }
+
+    // 更新标签为已删除状态
     const deletedTag = await prisma.tag.update({
       where: { id },
       data: {
@@ -102,12 +114,17 @@ export const deleteTag = async (req, res, next) => {
       },
     });
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: "Tag deleted successfully",
       tag: deletedTag,
     });
   } catch (error) {
-    next(error);
+    console.error("Error in deleteTag:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: error.message
+    });
   }
 };

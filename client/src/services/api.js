@@ -33,7 +33,13 @@ export const tagApi = {
   getAllTags: () => api.get('/tag'),
   
   // 创建标签
-  createTag: (data) => api.post('/tag', data)
+  createTag: (data) => api.post('/tag', data),
+  
+  // 更新标签
+  updateTag: (id, data) => api.patch(`/tag/${id}`, data),
+  
+  // 删除标签
+  deleteTag: (id) => api.delete(`/tag/${id}`)
 };
 
 export default api; 
