@@ -8,11 +8,13 @@ import SignUp from './pages/SignUp'
 import Donors from './pages/Donors'
 import CreateDonor from './pages/CreateDonor'
 import Events from './pages/Events'
+import Tags from './pages/Tags'
 import PrivateRoute from './components/PrivateRoute'
 import Settings from './pages/Settings'
 import CreateEvent from './pages/CreateEvent'
 import DonorDetails from './pages/DonorDetails'
 import EventDetails from './pages/EventDetails'
+import TagDetails from './pages/TagDetails'
 
 function App() {
   return (
@@ -44,6 +46,8 @@ function App() {
             <Route path="/events" element={<Events />} />
             <Route path="/events/create" element={<CreateEvent />} />
             <Route path="/events/:id" element={<EventDetails />} />
+            <Route path="/tags" element={<Tags />} />
+            <Route path="/tags/:id" element={<TagDetails />} />
             <Route path="/settings" element={<Settings />} />
           </Route>
         </Route>

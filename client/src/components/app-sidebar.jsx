@@ -9,7 +9,7 @@ import {
   SidebarHeader,
 } from "./ui/sidebar"
 import { Avatar, AvatarImage, AvatarFallback } from "./ui/avatar"
-import { Users, Calendar, Settings, LogOut } from "lucide-react" 
+import { Users, Calendar, Settings, LogOut, Tag } from "lucide-react" 
 import { signOut } from "../redux/auth/authSlice"
 
 export function AppSidebar() {
@@ -27,6 +27,11 @@ export function AppSidebar() {
       title: "Events",
       href: "/events",
       icon: Calendar
+    },
+    {
+      title: "Tags",
+      href: "/tags",
+      icon: Tag
     }
   ];
 
