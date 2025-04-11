@@ -16,7 +16,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import DonorSelection from "@/components/DonorSelection";
 import CurrentDonorsList from "@/components/CurrentDonorsList";
 
-export default function AddDonorsModal({ isOpen, onClose, onAddDonors, existingDonors = [] }) {
+export default function AddDonorsModal({
+  isOpen,
+  onClose,
+  onAddDonors,
+  existingDonors = [],
+}) {
   const { toast } = useToast();
   const [selectedDonors, setSelectedDonors] = useState([]);
   const [removedExistingDonors, setRemovedExistingDonors] = useState([]);
@@ -60,17 +65,22 @@ export default function AddDonorsModal({ isOpen, onClose, onAddDonors, existingD
   };
 
   const formattedExistingDonors = existingDonors
-    .map(donor => ({
+    .map((donor) => ({
       ...donor,
       isExisting: true,
     }))
-    .filter(donor => !removedExistingDonors.includes(donor.id));
+    .filter((donor) => !removedExistingDonors.includes(donor.id));
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="p-0 overflow-hidden flex flex-col max-h-[90vh]" style={{ width: '90vw', maxWidth: '1400px' }}>
+      <DialogContent
+        className="p-0 overflow-hidden flex flex-col max-h-[90vh]"
+        style={{ width: "90vw", maxWidth: "1400px" }}
+      >
         <DialogHeader className="p-4 pb-2 border-b">
-          <DialogTitle className="text-xl font-bold">Add Donors to Event</DialogTitle>
+          <DialogTitle className="text-xl font-bold">
+            Add Donors to Event
+          </DialogTitle>
         </DialogHeader>
 
         <div className="p-4 pt-2 overflow-y-auto flex-grow">
@@ -84,10 +94,17 @@ export default function AddDonorsModal({ isOpen, onClose, onAddDonors, existingD
             <div>
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-base font-semibold">
-                  Selected Donors ({selectedDonors.length + formattedExistingDonors.length})
+                  Selected Donors (
+                  {selectedDonors.length + formattedExistingDonors.length})
                 </h3>
-                {(selectedDonors.length > 0 || removedExistingDonors.length > 0) && (
-                  <Button type="button" variant="outline" size="sm" onClick={clearAll}>
+                {(selectedDonors.length > 0 ||
+                  removedExistingDonors.length > 0) && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={clearAll}
+                  >
                     Reset Changes
                   </Button>
                 )}
@@ -98,8 +115,8 @@ export default function AddDonorsModal({ isOpen, onClose, onAddDonors, existingD
                   <CurrentDonorsList
                     donors={[...selectedDonors, ...formattedExistingDonors]}
                     onRemove={(donor) => {
-                      const id = typeof donor === 'object' ? donor.id : donor;
-                      if (existingDonors.find(d => d.id === id)) {
+                      const id = typeof donor === "object" ? donor.id : donor;
+                      if (existingDonors.find((d) => d.id === id)) {
                         removeExistingDonor(id);
                       } else {
                         removeDonor(id);
@@ -109,7 +126,8 @@ export default function AddDonorsModal({ isOpen, onClose, onAddDonors, existingD
 
                   {removedExistingDonors.length > 0 && (
                     <div className="mt-4 text-sm text-red-500">
-                      {removedExistingDonors.length} donor(s) will be removed from the event
+                      {removedExistingDonors.length} donor(s) will be removed
+                      from the event
                     </div>
                   )}
                 </CardContent>
@@ -122,13 +140,13 @@ export default function AddDonorsModal({ isOpen, onClose, onAddDonors, existingD
           <Button variant="outline" onClick={onClose} className="mr-2">
             Cancel
           </Button>
-          <Button 
-            onClick={handleSubmit} 
-            disabled={selectedDonors.length === 0 && removedExistingDonors.length === 0}
+          <Button
+            onClick={handleSubmit}
+            disabled={
+              selectedDonors.length === 0 && removedExistingDonors.length === 0
+            }
           >
-            {selectedDonors.length > 0 ? `Add ${selectedDonors.length} Donor(s)` : ""}
-            {selectedDonors.length > 0 && removedExistingDonors.length > 0 ? " & " : ""}
-            {removedExistingDonors.length > 0 ? `Remove ${removedExistingDonors.length} Donor(s)` : ""}
+            Save Changes
           </Button>
         </DialogFooter>
       </DialogContent>

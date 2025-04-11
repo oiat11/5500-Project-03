@@ -44,24 +44,24 @@ export default function EditEventDetailsModal({ open, onClose, eventData, onSave
   const handleSave = async () => {
     try {
       const fixedDate = new Date(`${formData.date}T12:00:00`);
-
-      const res = await fetch(`/api/event/${eventData.id}`, {
-        method: "PUT",
+  
+      const res = await fetch(`/api/event/${eventData.id}/info`, {
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          ...formData,
+          name: formData.name,
+          description: formData.description,
           date: fixedDate.toISOString(),
-          donors: eventData.donors.map((d) => ({
-            donorId: d.donor_id,
-            status: d.status,
-          })),
+          location: formData.location,
+          status: formData.status,
+          tagIds: formData.tags?.map((tag) => tag.value) || [],
         }),
       });
-
+  
       if (!res.ok) throw new Error("Update failed");
-
+  
       toast({ title: "Success", description: "Event details updated successfully" });
-
+  
       if (onSave) onSave();
       onClose();
     } catch (err) {
@@ -73,7 +73,7 @@ export default function EditEventDetailsModal({ open, onClose, eventData, onSave
       });
     }
   };
-
+  
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-xl" hideCloseButton>
