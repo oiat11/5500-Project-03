@@ -274,6 +274,32 @@ export default function DonorDetails() {
               <SelectValue placeholder={`Select ${label}`} />
             </SelectTrigger>
             <SelectContent>
+              {field === "contact_phone_type" && (
+                <>
+                  <SelectItem value="Home">Home</SelectItem>
+                  <SelectItem value="Work">Work</SelectItem>
+                  <SelectItem value="Mobile">Mobile</SelectItem>
+                </>
+              )}
+              {(field === "subscription_events_in_person" || field === "subscription_events_magazine") && (
+                <>
+                  <SelectItem value="Opt_in">Opt in</SelectItem>
+                  <SelectItem value="Opt_out">Opt out</SelectItem>
+                </>
+              )}
+              {field === "communication_preference" && (
+                <>
+                  <SelectItem value="Thank_you">Thank you</SelectItem>
+                  <SelectItem value="Magazine">Magazine</SelectItem>
+                  <SelectItem value="Inspiration_event">Inspiration event</SelectItem>
+                  <SelectItem value="Newsletter">Newsletter</SelectItem>
+                  <SelectItem value="Survey">Survey</SelectItem>
+                  <SelectItem value="Holiday_Card">Holiday Card</SelectItem>
+                  <SelectItem value="Event">Event</SelectItem>
+                  <SelectItem value="Appeal">Appeal</SelectItem>
+                  <SelectItem value="Research_update">Research update</SelectItem>
+                </>
+              )}
             </SelectContent>
           </Select>
         ) : type === "checkbox" ? (
@@ -456,27 +482,39 @@ export default function DonorDetails() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div>
-              <p className="text-sm text-muted-foreground">Full Address</p>
-              <p className="text-lg font-medium">
-                {donor.unit_number && `${donor.unit_number} - `}
-                {donor.street_address}
-              </p>
-              <p className="text-lg font-medium">
-                {donor.city && donor.city.replace(/_/g, ' ')}
-              </p>
-            </div>
-
-            <div className="mt-4">
-              <p className="text-sm text-muted-foreground">Contact Phone Type</p>
-              <p className="text-lg font-medium">{donor.contact_phone_type}</p>
-            </div>
-
-            {donor.phone_restrictions && (
-              <div>
-                <p className="text-sm text-muted-foreground">Phone Restrictions</p>
-                <p className="text-lg font-medium">{donor.phone_restrictions}</p>
+            {isEditing ? (
+              <div className="grid grid-cols-2 gap-4">
+                {renderEditableField("Unit Number", "unit_number")}
+                {renderEditableField("Street Address", "street_address")}
+                {renderEditableField("City", "city")}
+                {renderEditableField("Contact Phone Type", "contact_phone_type", "select")}
+                {renderEditableField("Phone Restrictions", "phone_restrictions")}
               </div>
+            ) : (
+              <>
+                <div>
+                  <p className="text-sm text-muted-foreground">Full Address</p>
+                  <p className="text-lg font-medium">
+                    {donor.unit_number && `${donor.unit_number} - `}
+                    {donor.street_address}
+                  </p>
+                  <p className="text-lg font-medium">
+                    {donor.city && donor.city.replace(/_/g, ' ')}
+                  </p>
+                </div>
+
+                <div className="mt-4">
+                  <p className="text-sm text-muted-foreground">Contact Phone Type</p>
+                  <p className="text-lg font-medium">{donor.contact_phone_type}</p>
+                </div>
+
+                {donor.phone_restrictions && (
+                  <div>
+                    <p className="text-sm text-muted-foreground">Phone Restrictions</p>
+                    <p className="text-lg font-medium">{donor.phone_restrictions}</p>
+                  </div>
+                )}
+              </>
             )}
           </CardContent>
         </Card>
@@ -490,44 +528,54 @@ export default function DonorDetails() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm text-muted-foreground">Total Donations</p>
-                <p className="text-lg font-medium text-emerald-600">
-                  {formatCurrency(donor.total_donation_amount)}
-                </p>
+            {isEditing ? (
+              <div className="grid grid-cols-2 gap-4">
+                {renderEditableField("Total Donations", "total_donation_amount", "number")}
+                {renderEditableField("Total Pledge", "total_pledge", "number")}
+                {renderEditableField("Largest Gift", "largest_gift_amount", "number")}
+                {renderEditableField("Largest Gift Appeal", "largest_gift_appeal")}
+                {renderEditableField("Last Gift", "last_gift_amount", "number")}
               </div>
-              {donor.total_pledge && (
+            ) : (
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-sm text-muted-foreground">Total Pledge</p>
-                  <p className="text-lg font-medium">
-                    {formatCurrency(donor.total_pledge)}
+                  <p className="text-sm text-muted-foreground">Total Donations</p>
+                  <p className="text-lg font-medium text-emerald-600">
+                    {formatCurrency(donor.total_donation_amount)}
                   </p>
                 </div>
-              )}
-              {donor.largest_gift_amount && (
-                <div>
-                  <p className="text-sm text-muted-foreground">Largest Gift</p>
-                  <p className="text-lg font-medium">
-                    {formatCurrency(donor.largest_gift_amount)}
-                  </p>
-                </div>
-              )}
-              {donor.largest_gift_appeal && (
-                <div>
-                  <p className="text-sm text-muted-foreground">Largest Gift Appeal</p>
-                  <p className="text-lg font-medium">{donor.largest_gift_appeal}</p>
-                </div>
-              )}
-              {donor.last_gift_amount && (
-                <div>
-                  <p className="text-sm text-muted-foreground">Last Gift</p>
-                  <p className="text-lg font-medium">
-                    {formatCurrency(donor.last_gift_amount)}
-                  </p>
-                </div>
-              )}
-            </div>
+                {donor.total_pledge && (
+                  <div>
+                    <p className="text-sm text-muted-foreground">Total Pledge</p>
+                    <p className="text-lg font-medium">
+                      {formatCurrency(donor.total_pledge)}
+                    </p>
+                  </div>
+                )}
+                {donor.largest_gift_amount && (
+                  <div>
+                    <p className="text-sm text-muted-foreground">Largest Gift</p>
+                    <p className="text-lg font-medium">
+                      {formatCurrency(donor.largest_gift_amount)}
+                    </p>
+                  </div>
+                )}
+                {donor.largest_gift_appeal && (
+                  <div>
+                    <p className="text-sm text-muted-foreground">Largest Gift Appeal</p>
+                    <p className="text-lg font-medium">{donor.largest_gift_appeal}</p>
+                  </div>
+                )}
+                {donor.last_gift_amount && (
+                  <div>
+                    <p className="text-sm text-muted-foreground">Last Gift</p>
+                    <p className="text-lg font-medium">
+                      {formatCurrency(donor.last_gift_amount)}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -540,47 +588,79 @@ export default function DonorDetails() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm text-muted-foreground">In-Person Events</p>
-                <p className="text-lg font-medium">
-                  {donor.subscription_events_in_person && 
-                   donor.subscription_events_in_person.replace('_', ' ')}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Magazine</p>
-                <p className="text-lg font-medium">
-                  {donor.subscription_events_magazine && 
-                   donor.subscription_events_magazine.replace('_', ' ')}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Communication Type</p>
-                <p className="text-lg font-medium">
-                  {donor.communication_preference && 
-                   donor.communication_preference.replace('_', ' ')}
-                </p>
-              </div>
-            </div>
-
-            {(donor.email_restrictions || donor.communication_restrictions) && (
-              <div className="mt-4 border-t pt-4">
-                {donor.email_restrictions && (
-                  <div className="mb-2">
-                    <p className="text-sm text-muted-foreground">Email Restrictions</p>
-                    <p className="text-md">{donor.email_restrictions}</p>
+            {isEditing ? (
+              <div className="grid grid-cols-2 gap-4">
+                {renderEditableField("In-Person Events", "subscription_events_in_person", "select")}
+                {renderEditableField("Magazine", "subscription_events_magazine", "select")}
+                {renderEditableField("Communication Type", "communication_preference", "select")}
+                {renderEditableField("Email Restrictions", "email_restrictions")}
+                {renderEditableField("Communication Restrictions", "communication_restrictions")}
+                <div className="col-span-2 space-y-3 border-t pt-3">
+                  <div className="flex items-center space-x-2">
+                    {renderEditableField("Exclude from communications", "exclude", "checkbox")}
                   </div>
-                )}
-                {donor.communication_restrictions && (
+                  <div className="flex items-center space-x-2">
+                    {renderEditableField("Deceased", "deceased", "checkbox")}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm text-muted-foreground">
-                      Communication Restrictions
+                    <p className="text-sm text-muted-foreground">In-Person Events</p>
+                    <p className="text-lg font-medium">
+                      {donor.subscription_events_in_person && 
+                       donor.subscription_events_in_person.replace('_', ' ')}
                     </p>
-                    <p className="text-md">{donor.communication_restrictions}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Magazine</p>
+                    <p className="text-lg font-medium">
+                      {donor.subscription_events_magazine && 
+                       donor.subscription_events_magazine.replace('_', ' ')}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Communication Type</p>
+                    <p className="text-lg font-medium">
+                      {donor.communication_preference && 
+                       donor.communication_preference.replace('_', ' ')}
+                    </p>
+                  </div>
+                </div>
+
+                {(donor.email_restrictions || donor.communication_restrictions || donor.exclude || donor.deceased) && (
+                  <div className="mt-4 border-t pt-4">
+                    {donor.email_restrictions && (
+                      <div className="mb-2">
+                        <p className="text-sm text-muted-foreground">Email Restrictions</p>
+                        <p className="text-md">{donor.email_restrictions}</p>
+                      </div>
+                    )}
+                    {donor.communication_restrictions && (
+                      <div className="mb-2">
+                        <p className="text-sm text-muted-foreground">
+                          Communication Restrictions
+                        </p>
+                        <p className="text-md">{donor.communication_restrictions}</p>
+                      </div>
+                    )}
+                    {donor.exclude && (
+                      <div className="flex items-center gap-2 text-amber-600 mb-2">
+                        <Mail className="h-4 w-4" />
+                        <p>Excluded from communications</p>
+                      </div>
+                    )}
+                    {donor.deceased && (
+                      <div className="flex items-center gap-2 text-gray-600">
+                        <User className="h-4 w-4" />
+                        <p>Deceased</p>
+                      </div>
+                    )}
                   </div>
                 )}
-              </div>
+              </>
             )}
           </CardContent>
         </Card>
