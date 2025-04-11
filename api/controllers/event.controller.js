@@ -212,3 +212,115 @@ export const deleteEvent = async (req, res, next) => {
     next(err);
   }
 };
+
+export const updateEventInfo = async (req, res, next) => {
+  const { id } = req.params;
+  const { name, description, date, location, status, tagIds = [], donor_count } = req.body;
+
+  try {
+    const event = await prisma.event.update({
+      where: { id },
+      data: {
+        name,
+        description,
+        date: date ? new Date(date) : undefined,
+        location,
+        status,
+        donor_count,
+        tags: {
+          set: tagIds.map((tagId) => ({ id: tagId })),
+        },
+      },
+      include: { tags: true },
+    });
+
+    res.status(200).json({ success: true, message: 'Event info updated', event });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const updateDonorStatus = async (req, res, next) => {
+  const { id: event_id } = req.params;
+  const { donorId, status } = req.body;
+
+  try {
+    const existing = await prisma.donorEvent.findUnique({
+      where: { donor_id_event_id: { donor_id: donorId, event_id } },
+    });
+
+    if (!existing) {
+      return res.status(404).json({ error: 'Donor not part of this event' });
+    }
+
+    const updatesToEvent = { status };
+    const updatesToDonor = {};
+
+    if (!existing.counted_invitation && (status === 'invited' || status === 'confirmed')) {
+      updatesToEvent.counted_invitation = true;
+      updatesToDonor.total_invitations = { increment: 1 };
+    }
+
+    if (!existing.counted_attendance && status === 'attended') {
+      updatesToEvent.counted_attendance = true;
+      updatesToDonor.total_attendance = { increment: 1 };
+    }
+
+    await prisma.$transaction([
+      prisma.donorEvent.update({
+        where: { donor_id_event_id: { donor_id: donorId, event_id } },
+        data: updatesToEvent,
+      }),
+      Object.keys(updatesToDonor).length > 0
+        ? prisma.donor.update({ where: { id: donorId }, data: updatesToDonor })
+        : undefined,
+    ].filter(Boolean));
+
+    res.status(200).json({ success: true, message: 'Donor status updated' });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const addOrRemoveDonors = async (req, res, next) => {
+  const { id: event_id } = req.params;
+  const { donors = [] } = req.body; // [{ donorId, action: 'add' | 'remove', status }]
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      for (const d of donors) {
+        const { donorId, action, status } = d;
+
+        if (action === 'remove') {
+          await tx.donorEvent.delete({
+            where: { donor_id_event_id: { donor_id: donorId, event_id } },
+          });
+        }
+
+        if (action === 'add') {
+          await tx.donorEvent.create({
+            data: {
+              donor_id: donorId,
+              event_id,
+              status: status || 'invited',
+              counted_invitation: status === 'invited' || status === 'confirmed',
+              counted_attendance: status === 'attended',
+            },
+          });
+
+          const updates = {};
+          if (status === 'invited' || status === 'confirmed') updates.total_invitations = { increment: 1 };
+          if (status === 'attended') updates.total_attendance = { increment: 1 };
+
+          if (Object.keys(updates).length > 0) {
+            await tx.donor.update({ where: { id: donorId }, data: updates });
+          }
+        }
+      }
+    });
+
+    res.status(200).json({ success: true, message: 'Donors updated' });
+  } catch (err) {
+    next(err);
+  }
+};

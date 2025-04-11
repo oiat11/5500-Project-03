@@ -149,6 +149,8 @@ model DonorEvent {
   event_id   String
 
   status     ParticipationStatus?
+  counted_invitation Boolean @default(false)
+  counted_attendance Boolean @default(false)
   created_at DateTime @default(now())
 
   @@id([donor_id, event_id])
@@ -157,9 +159,11 @@ model DonorEvent {
   @@index([event_id])
 }
 
+
 enum ParticipationStatus {
   invited
   confirmed
+  attended
   declined
 }
 
