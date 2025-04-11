@@ -41,12 +41,12 @@ model Tag {
 
 model Donor {
   id                      String      @id @default(uuid())
-  first_name              String     @db.VarChar(255)
+  first_name              String      @db.VarChar(255)
   nick_name               String?     @db.VarChar(255)
-  last_name               String     @db.VarChar(255)
+  last_name               String      @db.VarChar(255)
   organization_name       String?     @db.VarChar(255)
-  unit_number        String?     @db.VarChar(255)
-  street_address          String     @db.Text
+  unit_number             String?     @db.VarChar(255)
+  street_address          String      @db.Text
   city                    City
 
   total_donation_amount   Decimal?    @default(0) @db.Decimal(10, 2)
@@ -77,7 +77,14 @@ model Donor {
   is_deleted              Boolean     @default(false)
   deleted_at              DateTime?
   created_at              DateTime    @default(now())
-  updated_at              DateTime    @updatedAt
+
+  attendance_lable              Boolean?
+  donation_lable                Boolean?
+  total_invitations             Int?       @default(0)
+  total_attendance              Int?       @default(0)
+  last_invitation_attendance    Boolean?
+  invitation_acceptance_rate Float?
+  ml_score                   Float?
 
   @@index([last_name])
   @@index([organization_name])
@@ -92,6 +99,7 @@ model Donor {
 
   @@map("Donor")
 }
+
 
 model DonorTag {
   donor              Donor       @relation(fields: [donor_id], references: [id], onDelete: Cascade)
