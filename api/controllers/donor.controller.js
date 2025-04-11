@@ -683,7 +683,8 @@ export const recommendDonors = async (req, res, next) => {
       maxDonationAmount,
       city,
       tags,
-      search, // ✅ optional
+      search,
+      sortBy = 'ml_score', // ✅ 默认用 ml_score 排序
     } = req.query;
 
     console.log("📥 recommendDonors req.query:", req.query);
@@ -732,7 +733,7 @@ export const recommendDonors = async (req, res, next) => {
       }
     }
 
-    // ✅ Add name search
+    // Name search
     if (search) {
       whereClause.OR = [
         { first_name: { contains: search } },
@@ -760,6 +761,10 @@ export const recommendDonors = async (req, res, next) => {
       ...tagsFilter,
     };
 
+    // ✅ 安全排序字段校验
+    const allowedSortFields = ['ml_score', 'total_donation_amount'];
+    const safeSortBy = allowedSortFields.includes(sortBy) ? sortBy : 'ml_score';
+
     const recommendedDonors = await prisma.donor.findMany({
       where: finalWhere,
       include: {
@@ -767,12 +772,13 @@ export const recommendDonors = async (req, res, next) => {
         events: true,
       },
       orderBy: {
-        total_donation_amount: 'desc',
+        [safeSortBy]: 'desc',
       },
       take,
     });
 
     res.status(200).json({
+      sortBy: safeSortBy,
       recommended: recommendedDonors,
     });
 
@@ -781,3 +787,4 @@ export const recommendDonors = async (req, res, next) => {
     next(error);
   }
 };
+

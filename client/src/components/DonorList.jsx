@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { UserPlus, UserMinus } from "lucide-react";
 
-export default function DonorList({ donors, onToggle, getActionIcon = "add" }) {
+export default function DonorList({ donors, onToggle, getActionIcon = "add", sortOption }) {
   return (
     <ScrollArea className="h-[650px] border rounded-md">
       <div className="p-2 space-y-1">
@@ -22,19 +22,36 @@ export default function DonorList({ donors, onToggle, getActionIcon = "add" }) {
                 <div className="font-medium truncate">
                   {`${donor.first_name} ${donor.last_name}`}
                 </div>
+
                 <div className="flex items-center text-sm text-muted-foreground">
-                  {donor.city && <span className="mr-2">{donor.city.replace(/_/g, ' ')}</span>}
+                  {donor.city && (
+                    <span className="mr-2">
+                      {donor.city.replace(/_/g, " ")}
+                    </span>
+                  )}
                   {donor.total_donation_amount > 0 && (
-                    <span>Total Donation: ${donor.total_donation_amount.toLocaleString()}</span>
+                    <span>
+                      Total Donation: $
+                      {donor.total_donation_amount.toLocaleString()}
+                    </span>
                   )}
                 </div>
+
+                {/* ✅ Show ML Score only if sortOption is "ml_score" */}
+                {sortOption === "ml_score" &&
+                  typeof donor.ml_score === "number" && (
+<div className="text-sm mt-1 font-semibold text-green-600 flex items-center gap-1">
+ML Score: {donor.ml_score.toFixed(2)}
+</div>
+                  )}
+
                 {donor.tags?.length > 0 && (
                   <div className="flex flex-wrap gap-1 mt-1">
                     {donor.tags.map((tagItem, index) => {
                       const tag = tagItem.tag || tagItem;
                       const tagId = tag.id || tagItem.tag_id || index;
-                      const tagName = tag.name || '';
-                      const tagColor = tag.color || '#6366f1';
+                      const tagName = tag.name || "";
+                      const tagColor = tag.color || "#6366f1";
 
                       return (
                         <Badge
@@ -54,6 +71,7 @@ export default function DonorList({ donors, onToggle, getActionIcon = "add" }) {
                   </div>
                 )}
               </div>
+
               <Button
                 type="button"
                 variant="ghost"
