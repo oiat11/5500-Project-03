@@ -4,7 +4,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { UserPlus, UserMinus } from "lucide-react";
 
-export default function DonorList({ donors, onToggle, getActionIcon = "add", sortOption }) {
+export default function DonorList({
+  donors,
+  onToggle,
+  getActionIcon = "add",
+  sortOption,
+}) {
   return (
     <ScrollArea className="h-[650px] border rounded-md">
       <div className="p-2 space-y-1">
@@ -40,9 +45,9 @@ export default function DonorList({ donors, onToggle, getActionIcon = "add", sor
                 {/* ✅ Show ML Score only if sortOption is "ml_score" */}
                 {sortOption === "ml_score" &&
                   typeof donor.ml_score === "number" && (
-<div className="text-sm mt-1 font-semibold text-green-600 flex items-center gap-1">
-ML Score: {donor.ml_score.toFixed(2)}
-</div>
+                    <div className="text-sm mt-1 font-semibold text-green-600 flex items-center gap-1">
+                      ML Score: {donor.ml_score.toFixed(2)}
+                    </div>
                   )}
 
                 {donor.tags?.length > 0 && (
@@ -54,18 +59,16 @@ ML Score: {donor.ml_score.toFixed(2)}
                       const tagColor = tag.color || "#6366f1";
 
                       return (
-                        <Badge
+                        <div
                           key={`${donor.id || donor.value}-${tagId}`}
-                          variant="outline"
-                          className="text-xs px-2 py-0.5"
+                          className="text-xs px-2 py-0.5 rounded-full font-medium"
                           style={{
-                            backgroundColor: `${tagColor}20`,
-                            borderColor: tagColor,
-                            color: tagColor,
+                            backgroundColor: tagColor,
+                            color: getContrastColor(tagColor),
                           }}
                         >
                           {tagName}
-                        </Badge>
+                        </div>
                       );
                     })}
                   </div>
@@ -91,4 +94,16 @@ ML Score: {donor.ml_score.toFixed(2)}
       </div>
     </ScrollArea>
   );
+}
+
+function getContrastColor(hexColor) {
+  if (!hexColor) return "#000000";
+
+  hexColor = hexColor.replace("#", "");
+  const r = parseInt(hexColor.substr(0, 2), 16);
+  const g = parseInt(hexColor.substr(2, 2), 16);
+  const b = parseInt(hexColor.substr(4, 2), 16);
+
+  const yiq = (r * 299 + g * 587 + b * 114) / 1000;
+  return yiq >= 128 ? "#000000" : "#ffffff";
 }
