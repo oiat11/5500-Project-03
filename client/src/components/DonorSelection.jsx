@@ -52,11 +52,12 @@ export default function DonorSelection({ selectedDonors, onChange, excludeDonors
       setLoading(true);
       const response = await axios.get("/api/donor/recommend", {
         params: {
-          count: recommendMode ? (targetDonorCount || 20) : undefined,
+          count: recommendMode ? (targetDonorCount || 50) : undefined,
           search: debouncedSearch,
           sortBy: recommendMode ? sortOption : undefined,
           ...recommendMode ? activeFilters : {},
-          excludeIds: excludeDonors.map((d) => d.id).join(","),
+          // ✅ 排除已选中或传入的 donors
+          excludeIds: [...selectedDonors, ...excludeDonors].map((d) => d.id).join(","),
         },
       });
       setFilteredDonors(response.data.recommended || []);
@@ -69,7 +70,7 @@ export default function DonorSelection({ selectedDonors, onChange, excludeDonors
     } finally {
       setLoading(false);
     }
-  }, [debouncedSearch, activeFilters, targetDonorCount, sortOption, recommendMode, excludeDonors]);
+  }, [debouncedSearch, activeFilters, targetDonorCount, sortOption, recommendMode, selectedDonors, excludeDonors]);
 
   useEffect(() => {
     if (searchTerm) {
@@ -84,6 +85,13 @@ export default function DonorSelection({ selectedDonors, onChange, excludeDonors
       fetchDonors();
     }
   }, [fetchDonors, showDonors, recommendMode, hasFetchedRecommendation]);
+
+  // ✅ Sort 切换时也触发推荐刷新
+  useEffect(() => {
+    if (recommendMode && showDonors) {
+      fetchDonors();
+    }
+  }, [sortOption]);
 
   const handleKeyDown = (e) => {
     if (e.key === "Enter") {
@@ -150,6 +158,12 @@ export default function DonorSelection({ selectedDonors, onChange, excludeDonors
     setRecommendMode(true);
     setShowDonors(true);
     setHasFetchedRecommendation(false);
+    setFilteredDonors([]); // ✅ 清空旧数据准备加载新推荐
+  };
+
+  const handleSortChange = (value) => {
+    setSortOption(value);
+    setHasFetchedRecommendation(false); // ✅ 强制重新加载
   };
 
   return (
@@ -182,11 +196,13 @@ export default function DonorSelection({ selectedDonors, onChange, excludeDonors
               How many donors would you like to see?
             </Label>
             <Input
-              id="donorCount"
-              type="number"
-              value={targetDonorCount || ""}
-              onChange={(e) => setTargetDonorCount(Number(e.target.value) || null)}
-            />
+  id="donorCount"
+  type="number"
+  className="w-full min-w-[200px]"
+  value={targetDonorCount || ""}
+  onChange={(e) => setTargetDonorCount(Number(e.target.value) || null)}
+/>
+
           </div>
 
           <div className="flex flex-col gap-1">
@@ -200,16 +216,16 @@ export default function DonorSelection({ selectedDonors, onChange, excludeDonors
                   <p className="max-w-[240px]">
                     You can find donors using either:
                     <br />
-                    • <strong>ML Suggested Donors</strong> — based on predicted attendance and donation likelihood using a machine learning model.
+                    • <strong>ML Suggested Donors</strong> — based on predicted attendance and donation likelihood.
                     <br />
-                    • <strong>Total Donation Amount</strong> — ranked by each donor’s total historical donation amount.
+                    • <strong>Total Donation Amount</strong> — ranked by total historical donation.
                   </p>
                 </TooltipContent>
               </Tooltip>
             </div>
             <div className="flex gap-2 items-end">
-              <Select value={sortOption} onValueChange={(value) => setSortOption(value)}>
-                <SelectTrigger className="w-[260px]">
+              <Select value={sortOption} onValueChange={handleSortChange}>
+                <SelectTrigger className="w-[180px] min-w-[160px]">
                   <SelectValue placeholder="Sort by..." />
                 </SelectTrigger>
                 <SelectContent>
@@ -230,35 +246,33 @@ export default function DonorSelection({ selectedDonors, onChange, excludeDonors
 
         {showDonors && (
           <div className="mt-4">
-           <div className="flex justify-between items-center mb-4">
-  <div className="text-base font-semibold">
-    {sortOption === "ml_score"
-      ? "ML Suggested Donors"
-      : "Sorted by Total Donation"}
-  </div>
-  <Button
-    type="button"
-    variant="outline"
-    onClick={addAllDonors}
-    disabled={filteredDonors.length === 0}
-  >
-    Add All
-  </Button>
-</div>
-
+            <div className="flex justify-between items-center mb-4">
+              <div className="text-base font-semibold">
+                {sortOption === "ml_score"
+                  ? "ML Suggested Donors"
+                  : "Sorted by Total Donation"}
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={addAllDonors}
+                disabled={filteredDonors.length === 0}
+              >
+                Add All
+              </Button>
+            </div>
 
             {filteredDonors.length === 0 ? (
               <div className="text-center text-muted-foreground">
                 No donors found. Try adjusting your filters or search keyword.
               </div>
             ) : (
-<DonorList
-  donors={filteredDonors}
-  onToggle={toggleDonor}
-  getActionIcon="add"
-  sortOption={sortOption}
-/>
-
+              <DonorList
+                donors={filteredDonors}
+                onToggle={toggleDonor}
+                getActionIcon="add"
+                sortOption={sortOption}
+              />
             )}
           </div>
         )}
