@@ -524,6 +524,12 @@ export default function EventDetails() {
                                           Declined
                                         </span>
                                       )}
+                                      {donorEvent.status === "attended" && (
+                                        <span className="flex items-center">
+                                          <span className="h-2 w-2 rounded-full bg-purple-500 mr-2"></span>
+                                          Attended
+                                        </span>
+                                      )}
                                     </SelectValue>
                                   </SelectTrigger>
                                   <SelectContent>
@@ -552,6 +558,15 @@ export default function EventDetails() {
                                       <span className="flex items-center">
                                         <span className="h-2 w-2 rounded-full bg-red-500 mr-2"></span>
                                         Declined
+                                      </span>
+                                    </SelectItem>
+                                    <SelectItem
+                                      value="attended"
+                                      className="text-purple-600"
+                                    >
+                                      <span className="flex items-center">
+                                        <span className="h-2 w-2 rounded-full bg-purple-500 mr-2"></span>
+                                        Attended
                                       </span>
                                     </SelectItem>
                                   </SelectContent>
@@ -636,6 +651,15 @@ export default function EventDetails() {
                         <Badge variant="outline" className="bg-red-100">
                           {
                             event.donors.filter((d) => d.status === "declined")
+                              .length
+                          }
+                        </Badge>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-500">Attended</span>
+                        <Badge variant="outline" className="bg-purple-100">
+                          {
+                            event.donors.filter((d) => d.status === "attended")
                               .length
                           }
                         </Badge>
