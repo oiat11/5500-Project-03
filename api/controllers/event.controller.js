@@ -326,7 +326,7 @@ export const addOrRemoveDonors = async (req, res, next) => {
 
 export const addCollaborator = async (req, res, next) => {
   const { id: eventId } = req.params;
-  const { userId } = req.body;
+  const { userIds } = req.body;
 
   try {
     const event = await prisma.event.findUnique({ where: { id: eventId } });
@@ -335,28 +335,35 @@ export const addCollaborator = async (req, res, next) => {
       return res.status(403).json({ message: "Only the event owner can add collaborators." });
     }
 
-    const exists = await prisma.eventCollaborator.findUnique({
+    const existingCollaborators = await prisma.eventCollaborator.findMany({
       where: {
-        eventId_userId: { eventId, userId },
+        eventId,
+        userId: { in: userIds },
       },
+      select: { userId: true },
     });
 
-    if (exists) {
-      return res.status(400).json({ message: "User is already a collaborator." });
+    const existingIds = new Set(existingCollaborators.map((c) => c.userId));
+    const toAdd = userIds.filter((uid) => !existingIds.has(uid));
+
+    if (toAdd.length === 0) {
+      return res.status(400).json({ message: "All users are already collaborators." });
     }
 
-    await prisma.eventCollaborator.create({
-      data: {
+    await prisma.eventCollaborator.createMany({
+      data: toAdd.map((uid) => ({
         eventId,
-        userId,
-      },
+        userId: uid,
+      })),
+      skipDuplicates: true,
     });
 
-    res.status(200).json({ message: "Collaborator added successfully." });
+    res.status(200).json({ message: `${toAdd.length} collaborator(s) added successfully.` });
   } catch (err) {
     next(err);
   }
 };
+
 
 export const getCollaborators = async (req, res, next) => {
   const { id } = req.params;
