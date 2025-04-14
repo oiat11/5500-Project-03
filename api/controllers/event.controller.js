@@ -321,3 +321,38 @@ export const addOrRemoveDonors = async (req, res, next) => {
     next(err);
   }
 };
+
+export const addCollaborator = async (req, res, next) => {
+  const { id: eventId } = req.params;
+  const { userId } = req.body;
+
+  try {
+    const event = await prisma.event.findUnique({ where: { id: eventId } });
+
+    if (!event || event.created_by !== req.user.id) {
+      return res.status(403).json({ message: "Only the event owner can add collaborators." });
+    }
+
+    const exists = await prisma.eventCollaborator.findUnique({
+      where: {
+        eventId_userId: { eventId, userId },
+      },
+    });
+
+    if (exists) {
+      return res.status(400).json({ message: "User is already a collaborator." });
+    }
+
+    await prisma.eventCollaborator.create({
+      data: {
+        eventId,
+        userId,
+      },
+    });
+
+    res.status(200).json({ message: "Collaborator added successfully." });
+  } catch (err) {
+    next(err);
+  }
+};
+
