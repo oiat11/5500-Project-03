@@ -53,6 +53,7 @@ import {
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import EditEventDetailsModal from "@/components/EditEventDetailsModal";
 import AddDonorsModal from "@/components/AddDonorsModal";
+import { addCollaborator } from '../../../api/controllers/event.controller';
 
 export default function EventDetails() {
   const { id } = useParams();
@@ -637,7 +638,7 @@ export default function EventDetails() {
               <CardContent>
                 {!event.donors || event.donors.length === 0 ? (
                   <div className="text-center py-4 text-gray-500">
-                    No donors to display
+                    No donors added to this event yet.
                   </div>
                 ) : (
                   <div className="space-y-4">

@@ -24,6 +24,8 @@ import { useToast } from "@/components/ui/toast";
 
 import DonorSelection from "@/components/DonorSelection";
 import CurrentDonorsList from "@/components/CurrentDonorsList";
+import ConfirmDialog from "@/components/ui/confirm-dialog";
+
 
 export default function CreateEvent() {
   const navigate = useNavigate();
@@ -41,6 +43,9 @@ export default function CreateEvent() {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showOverCapacityDialog, setShowOverCapacityDialog] = useState(false);
+const [pendingSubmit, setPendingSubmit] = useState(false);
+
 
   const goToNextStep = () => {
     const { name, date, location, capacity } = formData;
@@ -69,21 +74,36 @@ export default function CreateEvent() {
   
 
   const goToPreviousStep = () => setCurrentStep(1);
-
   const handleSubmit = async (e) => {
     e.preventDefault();
+  
+    const donorCount = formData.donors.length;
+    const capacityNum = parseInt(formData.capacity);
+  
+    if (capacityNum && donorCount > capacityNum) {
+      setShowOverCapacityDialog(true);
+      setPendingSubmit(true);
+      return;
+    }
+  
+    await submitEvent();
+  };
+  
+  const submitEvent = async () => {
     setLoading(true);
     try {
+      const localDate = new Date(`${formData.date}T12:00:00`);
+  
       const eventData = {
         ...formData,
+        date: localDate.toISOString(),
         capacity: parseInt(formData.capacity),
         donors: formData.donors.map((donor) => ({
           donorId: donor.id,
           status: donor.status || "invited",
         })),
       };
-      
-
+  
       const res = await axios.post("/api/event", eventData);
       if (res.status === 200 || res.status === 201) {
         toast({ title: "Success", description: "Event created successfully!" });
@@ -97,8 +117,13 @@ export default function CreateEvent() {
       toast({ title: "Error", description: errorMessage, variant: "destructive" });
     } finally {
       setLoading(false);
+      setPendingSubmit(false);
+      setShowOverCapacityDialog(false);
     }
   };
+  
+  
+  
 
   const clearAllDonors = () => {
     setFormData((prev) => ({ ...prev, donors: [], donor_count: 0 }));
@@ -114,6 +139,7 @@ export default function CreateEvent() {
   };
 
   const renderStepOne = () => (
+    
     <div className="max-w-xl mx-auto">
       <Card>
         <CardHeader>
@@ -137,7 +163,15 @@ export default function CreateEvent() {
 
           <div className="mb-4">
             <Label htmlFor="date" className="mb-1 block">Date <span className="text-red-500">*</span></Label>
-            <Input type="date" id="date" value={formData.date} onChange={(e) => setFormData({ ...formData, date: e.target.value })} required />
+            <Input
+  type="date"
+  id="date"
+  min={new Date().toISOString().split("T")[0]}
+  value={formData.date}
+  onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+  required
+/>
+
           </div>
 
           <div className="mb-4">
@@ -181,10 +215,21 @@ export default function CreateEvent() {
 
   const renderStepTwo = () => (
     <>
+    {formData.capacity && formData.donors.length > formData.capacity && (
+  <div className="p-4 mb-4 rounded-md bg-yellow-100 text-yellow-800 border border-yellow-300 text-sm">
+    ⚠️ You have selected <strong>{formData.donors.length}</strong> donors, which exceeds the event capacity of <strong>{formData.capacity}</strong>.
+  </div>
+)}
+
+{formData.capacity && (
+  <div className="text-sm text-muted-foreground mb-2">
+    Selected <strong>{formData.donors.length}</strong> out of <strong>{formData.capacity}</strong> donors
+  </div>
+)}
       <Card className="mb-6">
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
-            <CardTitle className="mb-1">Donor Selection</CardTitle>
+            <CardTitle className="mb-1">Donor Selection (Optional)</CardTitle>
             <CardDescription>Step 2 of 2: Select donors for your event</CardDescription>
           </div>
           <div className="flex space-x-4">
@@ -200,7 +245,10 @@ export default function CreateEvent() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <DonorSelection
           selectedDonors={formData.donors}
-          onChange={(updatedDonors) => setFormData((prev) => ({ ...prev, donors: updatedDonors, donor_count: updatedDonors.length }))}
+          onChange={(updatedDonors) =>
+            setFormData((prev) => ({ ...prev, donors: updatedDonors }))
+          }
+          
         />
 
         <Card>
@@ -225,6 +273,17 @@ export default function CreateEvent() {
       <form onSubmit={(e) => e.preventDefault()} className="space-y-6">
         {currentStep === 1 ? renderStepOne() : renderStepTwo()}
       </form>
+      <ConfirmDialog
+  open={showOverCapacityDialog}
+  onCancel={() => setShowOverCapacityDialog(false)}
+  onConfirm={submitEvent}
+  title="Exceeds Capacity"
+  description={`You have selected ${formData.donors.length} donors, which exceeds the event capacity of ${formData.capacity}. Are you sure you want to continue?`}
+  confirmLabel="Continue & Save"
+  cancelLabel="Cancel"
+  loading={loading}
+/>
+
     </div>
   );
 }

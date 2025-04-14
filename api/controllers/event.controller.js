@@ -12,11 +12,11 @@ export const createEventWithDonors = async (req, res, next) => {
       data: {
         name,
         description,
-        date: new Date(date),
+        date: date ? new Date(date) : null,
         location,
         status,
-        capacity,
-        created_by: String(req.user.id),
+        capacity: capacity ? parseInt(capacity) : null,
+        created_by: req.user.id,
         tags: {
           connect: tagIds.map((id) => ({ id })),
         },
@@ -44,6 +44,7 @@ export const createEventWithDonors = async (req, res, next) => {
     next(err);
   }
 };
+
 
 
 // Get All Events
