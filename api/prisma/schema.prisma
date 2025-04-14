@@ -22,6 +22,7 @@ model User {
   avatar    String?
   createdAt DateTime @default(now())
   events    Event[] @relation("UserCreatedEvents")
+  collaborators     EventCollaborator[]
 }
 
 model Tag {
@@ -138,9 +139,20 @@ model Event {
   updated_at  DateTime    @updatedAt
   created_by  Int?
   createdBy   User?       @relation("UserCreatedEvents", fields: [created_by], references: [id])
+  collaborators  EventCollaborator[]
 
   @@map("Event")
   @@index([date])
+}
+
+model EventCollaborator {
+  id        Int     @id @default(autoincrement())
+  event     Event   @relation(fields: [eventId], references: [id])
+  eventId   String
+  user      User    @relation(fields: [userId], references: [id])
+  userId    Int
+
+  @@unique([eventId, userId])
 }
 
 model DonorEvent {
