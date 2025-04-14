@@ -380,3 +380,35 @@ export const getCollaborators = async (req, res, next) => {
     next(err);
   }
 };
+
+export const removeCollaborator = async (req, res, next) => {
+  const { id: eventId, userId } = req.params;
+
+  try {
+    // 确保当前用户是创建者
+    const event = await prisma.event.findUnique({
+      where: { id: eventId },
+    });
+
+    if (!event || event.created_by !== req.user.id) {
+      return res.status(403).json({ message: "Only the owner can remove collaborators." });
+    }
+
+    await prisma.eventCollaborator.delete({
+      where: {
+        eventId_userId: {
+          eventId,
+          userId: parseInt(userId),
+        },
+      },
+    });
+
+    res.status(200).json({ message: "Collaborator removed successfully." });
+  } catch (err) {
+    if (err.code === 'P2025') {
+      return res.status(404).json({ message: "Collaborator not found." });
+    }
+    next(err);
+  }
+};
+
