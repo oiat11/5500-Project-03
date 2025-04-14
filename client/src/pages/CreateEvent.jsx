@@ -37,13 +37,15 @@ export default function CreateEvent() {
     location: "",
     status: "draft",
     donors: [],
-    donor_count: 0,
+    capacity: ""
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   const goToNextStep = () => {
-    if (!formData.name || !formData.date || !formData.location) {
+    const { name, date, location, capacity } = formData;
+  
+    if (!name || !date || !location || !capacity) {
       toast({
         title: "Missing information",
         description: "Please fill in all required fields",
@@ -51,8 +53,20 @@ export default function CreateEvent() {
       });
       return;
     }
+  
+    const capacityNum = Number(capacity);
+    if (!Number.isInteger(capacityNum) || capacityNum <= 0) {
+      toast({
+        title: "Invalid Capacity",
+        description: "Capacity must be a positive whole number (no decimals)",
+        variant: "destructive",
+      });
+      return;
+    }
+  
     setCurrentStep(2);
   };
+  
 
   const goToPreviousStep = () => setCurrentStep(1);
 
@@ -62,11 +76,13 @@ export default function CreateEvent() {
     try {
       const eventData = {
         ...formData,
+        capacity: parseInt(formData.capacity),
         donors: formData.donors.map((donor) => ({
           donorId: donor.id,
           status: donor.status || "invited",
         })),
       };
+      
 
       const res = await axios.post("/api/event", eventData);
       if (res.status === 200 || res.status === 201) {
@@ -128,6 +144,22 @@ export default function CreateEvent() {
             <Label htmlFor="location" className="mb-1 block">Location <span className="text-red-500">*</span></Label>
             <Input id="location" value={formData.location} onChange={(e) => setFormData({ ...formData, location: e.target.value })} required />
           </div>
+
+          <div className="mb-4">
+  <Label htmlFor="capacity" className="mb-1 block">
+    Capacity <span className="text-red-500">*</span>
+  </Label>
+  <Input
+    id="capacity"
+    type="number"
+    min="0"
+    value={formData.capacity}
+    onChange={(e) =>
+      setFormData({ ...formData, capacity: e.target.value })
+    }
+  />
+</div>
+
 
           <div className="mb-4">
             <Label className="mb-1 block">Status</Label>

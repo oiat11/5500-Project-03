@@ -130,7 +130,7 @@ model Event {
   date        DateTime?
   location    String?     @db.Text
   status      EventStatus @default(draft)
-  donor_count Int?
+  capacity Int?
   donors      DonorEvent[]
   tags        Tag[]       @relation("EventTags")
   is_deleted  Boolean     @default(false)

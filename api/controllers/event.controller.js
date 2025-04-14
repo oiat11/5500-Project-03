@@ -5,7 +5,7 @@ const prisma = new PrismaClient();
 
 // Create Event with Tags and Donors
 export const createEventWithDonors = async (req, res, next) => {
-  const { name, description, date, location, tagIds = [], donors = [], status, donor_count } = req.body;
+  const { name, description, date, location, tagIds = [], donors = [], status, capacity } = req.body;
 
   try {
     const event = await prisma.event.create({
@@ -15,11 +15,11 @@ export const createEventWithDonors = async (req, res, next) => {
         date: new Date(date),
         location,
         status,
+        capacity,
         created_by: String(req.user.id),
         tags: {
           connect: tagIds.map((id) => ({ id })),
         },
-        donor_count,
         donors: {
           create: donors.map((d) => ({
             donor: { connect: { id: d.donorId } },
@@ -37,13 +37,14 @@ export const createEventWithDonors = async (req, res, next) => {
 
     res.status(201).json({
       success: true,
-      message: 'Event created successfully',
+      message: "Event created successfully",
       event,
     });
   } catch (err) {
     next(err);
   }
 };
+
 
 // Get All Events
 export const getEvents = async (req, res, next) => {
