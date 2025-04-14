@@ -20,12 +20,12 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/components/ui/toast";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { useSelector } from "react-redux";
 
 export default function AddCollaboratorModal({
   open,
   onClose,
   eventId,
-  currentUserId,
   onSuccess,
 }) {
   const { toast } = useToast();
@@ -35,6 +35,9 @@ export default function AddCollaboratorModal({
   const [addedUsers, setAddedUsers] = useState([]);
   const [removedUsers, setRemovedUsers] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const currentUserId = useSelector((state) => state.auth.currentUser?.id);
+ 
+  console.log("currentUserId", currentUserId);
 
   useEffect(() => {
     if (!open) return;

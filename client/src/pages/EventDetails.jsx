@@ -823,7 +823,6 @@ export default function EventDetails() {
   open={showAddCollaborator}
   onClose={() => setShowAddCollaborator(false)}
   eventId={id}
-  existingCollaborators={event.collaborators}
   onSuccess={fetchEventDetails}
 />
 
