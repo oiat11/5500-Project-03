@@ -598,7 +598,7 @@ export default function EventDetails() {
                 <div className="flex justify-between items-center">
                   <span className="text-gray-500">Created By</span>
                   <span>
-                    {event.creator?.username || `User #${event.created_by}`}
+                  {event.createdBy?.username || `User #${event.created_by}`}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">

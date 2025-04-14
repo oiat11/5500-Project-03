@@ -676,7 +676,7 @@ export const recommendDonors = async (req, res, next) => {
     if (!req.user) return next(errorHandler(401, 'Unauthorized: Please log in'));
 
     const {
-      count = 20,
+      count = 50, 
       excludeIds,
       eventId,
       minDonationAmount,
@@ -684,10 +684,8 @@ export const recommendDonors = async (req, res, next) => {
       city,
       tags,
       search,
-      sortBy = 'ml_score', // ✅ 默认用 ml_score 排序
+      sortBy = 'ml_score',
     } = req.query;
-
-    console.log("📥 recommendDonors req.query:", req.query);
 
     const take = parseInt(count);
     const excludeIdArray = excludeIds
@@ -702,12 +700,12 @@ export const recommendDonors = async (req, res, next) => {
       is_deleted: false,
     };
 
-    // Exclude selected donors
+    // ✅ Exclude donors that have already been selected or passed in
     if (excludeIdArray.length > 0) {
       whereClause.id = { notIn: excludeIdArray };
     }
 
-    // Exclude donors already in the event
+    // ✅ Exclude donors already in this event (if provided)
     if (eventId) {
       whereClause.events = {
         none: {
@@ -716,13 +714,13 @@ export const recommendDonors = async (req, res, next) => {
       };
     }
 
-    // City filter
+    // ✅ Filter by city
     if (city) {
       const cities = typeof city === 'string' ? city.split(',') : city;
       whereClause.city = { in: cities };
     }
 
-    // Donation amount filter
+    // ✅ Filter by donation range
     if (minDonationAmount || maxDonationAmount) {
       whereClause.total_donation_amount = {};
       if (minDonationAmount !== undefined) {
@@ -733,7 +731,7 @@ export const recommendDonors = async (req, res, next) => {
       }
     }
 
-    // Name search
+    // ✅ Name keyword search
     if (search) {
       whereClause.OR = [
         { first_name: { contains: search } },
@@ -741,7 +739,7 @@ export const recommendDonors = async (req, res, next) => {
       ];
     }
 
-    // Tags filter
+    // ✅ Filter by tags (optional)
     const tagsFilter = tags
       ? {
           tags: {
@@ -756,12 +754,13 @@ export const recommendDonors = async (req, res, next) => {
         }
       : {};
 
+    // ✅ Combine all filters
     const finalWhere = {
       ...whereClause,
       ...tagsFilter,
     };
 
-    // ✅ 安全排序字段校验
+    // ✅ Sort fallback
     const allowedSortFields = ['ml_score', 'total_donation_amount'];
     const safeSortBy = allowedSortFields.includes(sortBy) ? sortBy : 'ml_score';
 
@@ -787,4 +786,3 @@ export const recommendDonors = async (req, res, next) => {
     next(error);
   }
 };
-

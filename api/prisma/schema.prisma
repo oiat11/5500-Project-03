@@ -16,11 +16,12 @@ datasource db {
 
 model User {
   id        Int     @id @default(autoincrement())
-  username      String
+  username  String
   email     String  @unique
   password  String
-  avatar  String? 
+  avatar    String?
   createdAt DateTime @default(now())
+  events    Event[] @relation("UserCreatedEvents")
 }
 
 model Tag {
@@ -135,7 +136,8 @@ model Event {
   deleted_at  DateTime?
   created_at  DateTime    @default(now())
   updated_at  DateTime    @updatedAt
-  created_by  String?
+  created_by  Int?
+  createdBy   User?       @relation("UserCreatedEvents", fields: [created_by], references: [id])
 
   @@map("Event")
   @@index([date])

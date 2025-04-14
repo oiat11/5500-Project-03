@@ -53,21 +53,31 @@ export const getEvents = async (req, res, next) => {
       include: {
         tags: true,
         donors: {
-          include: { donor: true },
+          include: {
+            donor: true,
+          },
+        },
+        createdBy: {
+          select: {
+            username: true,
+            avatar: true
+          },
         },
       },
-      orderBy: { date: 'asc' },
+      orderBy: { date: "asc" },
     });
 
     res.status(200).json({
       success: true,
-      message: 'Events fetched successfully',
+      message: "Events fetched successfully",
       events,
     });
   } catch (err) {
     next(err);
   }
 };
+
+
 
 // Get Event by ID
 export const getEventById = async (req, res, next) => {
@@ -83,54 +93,40 @@ export const getEventById = async (req, res, next) => {
             donor: {
               include: {
                 tags: {
-                  include: {
-                    tag: true
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
+                  include: { tag: true },
+                },
+              },
+            },
+          },
+        },
+        createdBy: {
+          select: {
+            username: true,
+          },
+        },
+      },
     });
-    
 
     if (!event) {
       return res.status(404).json({
         success: false,
-        message: 'Event not found'
+        message: "Event not found",
       });
     }
 
-    // check whether the event is created by the current user
-    const isEventOwner = event.created_by === String(req.user.id);
-    
-    // 获取创建者的用户信息
-    let creatorInfo = null;
-    try {
-      if (event.created_by) {
-        creatorInfo = await prisma.user.findUnique({
-          where: { id: parseInt(event.created_by) },
-          select: { username: true }
-        });
-      }
-    } catch (err) {
-      console.error("Error fetching creator info:", err);
-    }
+    const isEventOwner = req.user?.id === event.created_by;
 
     res.status(200).json({
       success: true,
-      message: 'Event fetched successfully',
-      event: {
-        ...event,
-        creator: creatorInfo
-      },
-      isEventOwner
+      message: "Event fetched successfully",
+      event,
+      isEventOwner,
     });
   } catch (err) {
     next(err);
   }
 };
+
 
 // Update Event
 export const updateEvent = async (req, res, next) => {

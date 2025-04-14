@@ -32,23 +32,23 @@ export const verifyEventOwnership = async (req, res, next) => {
     const event = await prisma.event.findUnique({
       where: { id }
     });
-    
+
     if (!event) {
       return res.status(404).json({
         success: false,
         message: 'Event not found'
       });
     }
-    
-    if (event.created_by !== String(req.user.id)) {
+    if (event.created_by !== Number(req.user.id)) {
       return res.status(403).json({
         success: false,
         message: 'You do not have permission to modify this event'
       });
     }
-    
+
     next();
   } catch (err) {
     next(err);
   }
 };
+
