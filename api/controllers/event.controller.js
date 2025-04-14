@@ -337,46 +337,6 @@ export const addOrRemoveDonors = async (req, res, next) => {
   }
 };
 
-export const addCollaborator = async (req, res, next) => {
-  const { id: eventId } = req.params;
-  const { userIds } = req.body;
-
-  try {
-    const event = await prisma.event.findUnique({ where: { id: eventId } });
-
-    if (!event || event.created_by !== req.user.id) {
-      return res.status(403).json({ message: "Only the event owner can add collaborators." });
-    }
-
-    const existingCollaborators = await prisma.eventCollaborator.findMany({
-      where: {
-        eventId,
-        userId: { in: userIds },
-      },
-      select: { userId: true },
-    });
-
-    const existingIds = new Set(existingCollaborators.map((c) => c.userId));
-    const toAdd = userIds.filter((uid) => !existingIds.has(uid));
-
-    if (toAdd.length === 0) {
-      return res.status(400).json({ message: "All users are already collaborators." });
-    }
-
-    await prisma.eventCollaborator.createMany({
-      data: toAdd.map((uid) => ({
-        eventId,
-        userId: uid,
-      })),
-      skipDuplicates: true,
-    });
-
-    res.status(200).json({ message: `${toAdd.length} collaborator(s) added successfully.` });
-  } catch (err) {
-    next(err);
-  }
-};
-
 
 export const getCollaborators = async (req, res, next) => {
   const { id } = req.params;
@@ -403,34 +363,49 @@ export const getCollaborators = async (req, res, next) => {
   }
 };
 
-export const removeCollaborator = async (req, res, next) => {
-  const { id: eventId, userId } = req.params;
+
+export const updateCollaborators = async (req, res, next) => {
+  const { id: eventId } = req.params;
+  const { addIds = [], removeIds = [] } = req.body;
 
   try {
-    // 确保当前用户是创建者
-    const event = await prisma.event.findUnique({
-      where: { id: eventId },
-    });
+    const event = await prisma.event.findUnique({ where: { id: eventId } });
 
     if (!event || event.created_by !== req.user.id) {
-      return res.status(403).json({ message: "Only the owner can remove collaborators." });
+      return res.status(403).json({ message: "Only the event owner can update collaborators." });
     }
 
-    await prisma.eventCollaborator.delete({
-      where: {
-        eventId_userId: {
-          eventId,
-          userId: parseInt(userId),
+    // Prevent adding or removing yourself
+    if (removeIds.includes(req.user.id) || addIds.includes(req.user.id)) {
+      return res.status(400).json({ message: "You cannot add or remove yourself." });
+    }
+
+    //Add collaborators (skip if already exists)
+    for (const userId of addIds) {
+      await prisma.eventCollaborator.upsert({
+        where: {
+          eventId_userId: { eventId, userId },
         },
-      },
-    });
-
-    res.status(200).json({ message: "Collaborator removed successfully." });
-  } catch (err) {
-    if (err.code === 'P2025') {
-      return res.status(404).json({ message: "Collaborator not found." });
+        update: {},
+        create: {
+          eventId,
+          userId,
+        },
+      });
     }
+
+    // Remove collaborators
+    if (removeIds.length > 0) {
+      await prisma.eventCollaborator.deleteMany({
+        where: {
+          eventId,
+          userId: { in: removeIds },
+        },
+      });
+    }
+
+    res.status(200).json({ message: "Collaborators updated." });
+  } catch (err) {
     next(err);
   }
 };
-

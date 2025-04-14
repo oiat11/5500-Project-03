@@ -53,7 +53,6 @@ import {
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import EditEventDetailsModal from "@/components/EditEventDetailsModal";
 import AddDonorsModal from "@/components/AddDonorsModal";
-import { addCollaborator } from "../../../api/controllers/event.controller";
 import AddCollaboratorModal from "@/components/AddCollaboratorModal";
 
 export default function EventDetails() {
@@ -412,7 +411,7 @@ export default function EventDetails() {
               <CardContent>
                 {!event.donors || event.donors.length === 0 ? (
                   <div className="text-center py-8 text-gray-500">
-                    No donors associated with this event.
+                    No donors added to this event yet.
                   </div>
                 ) : (
                   <ScrollArea className="h-[400px]">
@@ -820,12 +819,14 @@ export default function EventDetails() {
           ...d.donor,
         }))}
       />
-      <AddCollaboratorModal
-        open={showAddCollaborator}
-        onClose={() => setShowAddCollaborator(false)}
-        eventId={id}
-        onSuccess={fetchEventDetails}
-      />
+<AddCollaboratorModal
+  open={showAddCollaborator}
+  onClose={() => setShowAddCollaborator(false)}
+  eventId={id}
+  existingCollaborators={event.collaborators}
+  onSuccess={fetchEventDetails}
+/>
+
     </div>
   );
 }
