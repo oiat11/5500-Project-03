@@ -102,6 +102,7 @@ export const getEventById = async (req, res, next) => {
         createdBy: {
           select: {
             username: true,
+            avatar: true
           },
         },
       },

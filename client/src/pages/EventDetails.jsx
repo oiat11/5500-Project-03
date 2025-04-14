@@ -50,6 +50,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import EditEventDetailsModal from "@/components/EditEventDetailsModal";
 import AddDonorsModal from "@/components/AddDonorsModal";
 
@@ -597,10 +598,23 @@ export default function EventDetails() {
                 <Separator />
                 <div className="flex justify-between items-center">
                   <span className="text-gray-500">Created By</span>
-                  <span>
-                  {event.createdBy?.username || `User #${event.created_by}`}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <Avatar className="h-6 w-6">
+                      {event.createdBy?.avatar ? (
+                        <AvatarImage src={event.createdBy.avatar} />
+                      ) : (
+                        <AvatarFallback>
+                          {event.createdBy?.username?.charAt(0).toUpperCase() ||
+                            "?"}
+                        </AvatarFallback>
+                      )}
+                    </Avatar>
+                    <span>
+                      {event.createdBy?.username || `User #${event.created_by}`}
+                    </span>
+                  </div>
                 </div>
+
                 <div className="flex justify-between items-center">
                   <span className="text-gray-500">Created</span>
                   <span>
