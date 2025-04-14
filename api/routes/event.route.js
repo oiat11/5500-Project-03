@@ -10,6 +10,7 @@ import {
   updateDonorStatus,
   addOrRemoveDonors,
   addCollaborator,
+  getCollaborators,
   } from '../controllers/event.controller.js';
 
 const router = express.Router();
@@ -24,5 +25,6 @@ router.patch('/:id/info', verifyToken, verifyEventOwnership, updateEventInfo);
 router.patch('/:id/donor-status', verifyToken, verifyEventOwnership, updateDonorStatus);
 router.patch('/:id/edit-donors', verifyToken, verifyEventOwnership, addOrRemoveDonors);
 router.post('/:id/add-collaborator', verifyToken, verifyEventOwnership, addCollaborator);
+router.get('/:id/collaborators', verifyToken, getCollaborators);
 
 export default router;

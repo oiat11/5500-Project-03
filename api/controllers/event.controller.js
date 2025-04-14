@@ -356,3 +356,27 @@ export const addCollaborator = async (req, res, next) => {
   }
 };
 
+export const getCollaborators = async (req, res, next) => {
+  const { id } = req.params;
+
+  try {
+    const collaborators = await prisma.eventCollaborator.findMany({
+      where: { eventId: id },
+      include: {
+        user: {
+          select: {
+            id: true,
+            username: true,
+            avatar: true,
+          },
+        },
+      },
+    });
+
+    res.status(200).json({
+      collaborators: collaborators.map((c) => c.user),
+    });
+  } catch (err) {
+    next(err);
+  }
+};
