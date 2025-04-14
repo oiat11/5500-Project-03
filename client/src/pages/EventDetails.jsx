@@ -53,7 +53,8 @@ import {
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import EditEventDetailsModal from "@/components/EditEventDetailsModal";
 import AddDonorsModal from "@/components/AddDonorsModal";
-import { addCollaborator } from '../../../api/controllers/event.controller';
+import { addCollaborator } from "../../../api/controllers/event.controller";
+import AddCollaboratorModal from "@/components/AddCollaboratorModal";
 
 export default function EventDetails() {
   const { id } = useParams();
@@ -68,6 +69,7 @@ export default function EventDetails() {
   const [showEditDetails, setShowEditDetails] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showAddDonors, setShowAddDonors] = useState(false);
+  const [showAddCollaborator, setShowAddCollaborator] = useState(false);
 
   const [formData, setFormData] = useState({
     donors: [],
@@ -195,7 +197,6 @@ export default function EventDetails() {
     try {
       setSaving(true);
 
-      // 更新本地状态（前端 UI）
       const updatedDonors = event.donors.map((donor) =>
         donor.donor_id === donorId ? { ...donor, status: newStatus } : donor
       );
@@ -204,7 +205,6 @@ export default function EventDetails() {
         donors: updatedDonors,
       }));
 
-      // 向后端发送更新请求（只更新一个 donor 的 status）
       const response = await fetch(`/api/event/${id}/donor-status`, {
         method: "PATCH",
         headers: {
@@ -588,9 +588,23 @@ export default function EventDetails() {
           {/* Sidebar */}
           <div className="space-y-6">
             <Card>
-              <CardHeader>
-                <CardTitle>Event Summary</CardTitle>
-              </CardHeader>
+            <CardHeader>
+  <div className="flex items-center justify-between w-full">
+    <CardTitle>Event Summary</CardTitle>
+    {isEventOwner && (
+      <Button
+        size="sm"
+        variant="outline"
+        onClick={() => setShowAddCollaborator(true)}
+        className="flex items-center gap-1"
+      >
+        <PlusCircle className="h-4 w-4" />
+        Add Collaborator
+      </Button>
+    )}
+  </div>
+</CardHeader>
+
               <CardContent className="space-y-4">
                 <div className="flex justify-between items-center">
                   <span className="text-gray-500">Status</span>
@@ -779,6 +793,12 @@ export default function EventDetails() {
           ...d.donor,
         }))}
       />
+      <AddCollaboratorModal
+  open={showAddCollaborator}
+  onClose={() => setShowAddCollaborator(false)}
+  eventId={id}
+  onSuccess={fetchEventDetails}
+/>
     </div>
   );
 }

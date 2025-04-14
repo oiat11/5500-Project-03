@@ -28,13 +28,12 @@ export default function EventCard({ event }) {
         <CardTitle className="text-xl">{event.name}</CardTitle>
       </CardHeader>
       <CardContent className="p-4 pt-0 space-y-3">
-        {/* 日期 */}
+
         <div className="flex items-center text-sm text-muted-foreground">
           <CalendarIcon className="mr-2 h-4 w-4" />
           {event.date ? format(new Date(event.date), "PPP") : "No date set"}
         </div>
 
-        {/* 地址 */}
         {event.location && (
           <div className="flex items-center text-sm text-muted-foreground">
             <MapPinIcon className="mr-2 h-4 w-4" />
@@ -42,12 +41,10 @@ export default function EventCard({ event }) {
           </div>
         )}
 
-        {/* 描述 */}
         {event.description && (
           <p className="text-sm line-clamp-2">{event.description}</p>
         )}
 
-        {/* 标签 */}
         {event.tags && event.tags.length > 0 && (
           <div className="flex items-start gap-1">
             <TagIcon className="h-4 w-4 mt-0.5" />
@@ -70,7 +67,6 @@ export default function EventCard({ event }) {
           </div>
         )}
 
-        {/* 创建人 & Donor 数 */}
         <div className="flex justify-between items-center mt-4 pt-2 border-t">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Avatar className="h-6 w-6">
@@ -87,7 +83,7 @@ export default function EventCard({ event }) {
           <div className="flex items-center gap-3">
             <div className="flex items-center text-sm text-muted-foreground">
               <UsersIcon className="mr-1 h-4 w-4" />
-              {event.donors?.length || 0} donors
+              {event.capacity || 0} capacity
             </div>
             {event.status && (
               <Badge
