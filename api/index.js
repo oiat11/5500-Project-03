@@ -6,6 +6,8 @@ import authRoutes from './routes/auth.route.js';
 import donorRoutes from './routes/donor.route.js';
 import eventRoutes from './routes/event.route.js';
 import tagRoutes from './routes/tag.route.js';
+import userRoutes from './routes/user.route.js';
+
 dotenv.config();
 
 const app = express();
@@ -31,6 +33,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/donor', donorRoutes);
 app.use('/api/event', eventRoutes);
 app.use('/api/tag', tagRoutes);
+app.use('/api/user', userRoutes);
 
 app.use((err, req, res, next) => {
     console.error("❌ Server Error:", err);
