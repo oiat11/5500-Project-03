@@ -588,22 +588,22 @@ export default function EventDetails() {
           {/* Sidebar */}
           <div className="space-y-6">
             <Card>
-            <CardHeader>
-  <div className="flex items-center justify-between w-full">
-    <CardTitle>Event Summary</CardTitle>
-    {isEventOwner && (
-      <Button
-        size="sm"
-        variant="outline"
-        onClick={() => setShowAddCollaborator(true)}
-        className="flex items-center gap-1"
-      >
-        <PlusCircle className="h-4 w-4" />
-        Add Collaborator
-      </Button>
-    )}
-  </div>
-</CardHeader>
+              <CardHeader>
+                <div className="flex items-center justify-between w-full">
+                  <CardTitle>Event Summary</CardTitle>
+                  {isEventOwner && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setShowAddCollaborator(true)}
+                      className="flex items-center gap-1"
+                    >
+                      <PlusCircle className="h-4 w-4" />
+                      Add Collaborator
+                    </Button>
+                  )}
+                </div>
+              </CardHeader>
 
               <CardContent className="space-y-4">
                 <div className="flex justify-between items-center">
@@ -612,7 +612,7 @@ export default function EventDetails() {
                 </div>
                 <Separator />
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-500">Created By</span>
+                  <span className="text-gray-500">Event Owner</span>
                   <div className="flex items-center gap-2">
                     <Avatar className="h-6 w-6">
                       {event.createdBy?.avatar ? (
@@ -630,6 +630,33 @@ export default function EventDetails() {
                   </div>
                 </div>
 
+{/* Add Collaborators section */}
+{event.collaborators && event.collaborators.length > 0 && (
+  <>
+
+    <div className="space-y-2">
+      <span className="text-gray-500">Collaborators</span>
+      <div className="flex flex-col gap-2 mt-2">
+        {event.collaborators.map((collaborator) => (
+          <div key={collaborator.user.id} className="flex items-center gap-2">
+            <Avatar className="h-6 w-6">
+              {collaborator.user.avatar ? (
+                <AvatarImage src={collaborator.user.avatar} />
+              ) : (
+                <AvatarFallback>
+                  {collaborator.user.username?.charAt(0).toUpperCase() || "?"}
+                </AvatarFallback>
+              )}
+            </Avatar>
+            <span className="text-sm">{collaborator.user.username}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  </>
+)}
+
+<Separator />
                 <div className="flex justify-between items-center">
                   <span className="text-gray-500">Created</span>
                   <span>
@@ -794,11 +821,11 @@ export default function EventDetails() {
         }))}
       />
       <AddCollaboratorModal
-  open={showAddCollaborator}
-  onClose={() => setShowAddCollaborator(false)}
-  eventId={id}
-  onSuccess={fetchEventDetails}
-/>
+        open={showAddCollaborator}
+        onClose={() => setShowAddCollaborator(false)}
+        eventId={id}
+        onSuccess={fetchEventDetails}
+      />
     </div>
   );
 }

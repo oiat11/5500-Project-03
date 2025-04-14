@@ -82,6 +82,7 @@ export const getEvents = async (req, res, next) => {
 
 
 // Get Event by ID
+// Get Event by ID
 export const getEventById = async (req, res, next) => {
   const { id } = req.params;
 
@@ -104,7 +105,18 @@ export const getEventById = async (req, res, next) => {
         createdBy: {
           select: {
             username: true,
-            avatar: true
+            avatar: true,
+          },
+        },
+        collaborators: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                username: true,
+                avatar: true,
+              },
+            },
           },
         },
       },
@@ -129,6 +141,7 @@ export const getEventById = async (req, res, next) => {
     next(err);
   }
 };
+
 
 
 // Update Event
