@@ -443,6 +443,7 @@ export const getCollaborators = async (req, res, next) => {
   }
 };
 
+
 export const updateCollaborators = async (req, res, next) => {
   const { id: eventId } = req.params;
   const { addIds = [], removeIds = [] } = req.body;
@@ -468,42 +469,40 @@ export const updateCollaborators = async (req, res, next) => {
           update: {},
           create: { eventId, userId },
         });
-        added.push(userId);
+        const user = await tx.user.findUnique({ where: { id: userId } });
+        added.push({ id: userId, username: user?.username || null });
       }
 
       if (removeIds.length > 0) {
         await tx.eventCollaborator.deleteMany({
           where: { eventId, userId: { in: removeIds } },
         });
-        removed.push(...removeIds);
+        for (const userId of removeIds) {
+          const user = await tx.user.findUnique({ where: { id: userId } });
+          removed.push({ id: userId, username: user?.username || null });
+        }
       }
     });
 
-    const historyTasks = [];
-
-    for (const userId of added) {
-      historyTasks.push(
-        recordEditHistory({
-          event_id: eventId,
-          editor_id: req.user.id,
-          edit_type: 'collaborator_added',
-          new_value: userId.toString(),
-        }).catch((e) => console.warn('History error (add):', e))
-      );
+    for (const { id, username } of added) {
+      recordEditHistory({
+        event_id: eventId,
+        editor_id: req.user.id,
+        edit_type: 'collaborator_added',
+        new_value: id.toString(),
+        meta: JSON.stringify({ username }),
+      }, prisma);
     }
 
-    for (const userId of removed) {
-      historyTasks.push(
-        recordEditHistory({
-          event_id: eventId,
-          editor_id: req.user.id,
-          edit_type: 'collaborator_removed',
-          old_value: userId.toString(),
-        }).catch((e) => console.warn('History error (remove):', e))
-      );
+    for (const { id, username } of removed) {
+      recordEditHistory({
+        event_id: eventId,
+        editor_id: req.user.id,
+        edit_type: 'collaborator_removed',
+        old_value: id.toString(),
+        meta: JSON.stringify({ username }),
+      }, prisma);
     }
-
-    await Promise.all(historyTasks); 
 
     res.status(200).json({ message: "Collaborators updated." });
   } catch (err) {

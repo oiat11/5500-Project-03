@@ -43,30 +43,22 @@ export default function EventHistoryPanel({ eventId }) {
 
   const getActionDescription = (item) => {
     const meta = item.meta ? JSON.parse(item.meta) : null;
-
+  
     switch (item.edit_type) {
       case "event_created":
         return `Created event "${item.new_value}"`;
       case "name_updated":
-        return `Changed name from "${item.old_value || "None"}" to "${
-          item.new_value
-        }"`;
+        return `Changed name from "${item.old_value || "None"}" to "${item.new_value}"`;
       case "description_updated":
         return "Updated event description";
       case "location_updated":
-        return `Changed location from "${item.old_value || "None"}" to "${
-          item.new_value || "None"
-        }"`;
+        return `Changed location from "${item.old_value || "None"}" to "${item.new_value || "None"}"`;
       case "date_updated":
         return `Changed date to "${meta?.formatted || item.new_value}"`;
       case "status_updated":
-        return `Changed status from "${item.old_value || "None"}" to "${
-          item.new_value
-        }"`;
+        return `Changed status from "${item.old_value || "None"}" to "${item.new_value}"`;
       case "donor_status_updated":
-        return `Changed status of ${meta?.donorName || "a donor"} from "${
-          item.old_value
-        }" to "${item.new_value}"`;
+        return `Changed status of ${meta?.donorName || "a donor"} from "${item.old_value}" to "${item.new_value}"`;
       case "donor_added_bulk":
         return item.new_value;
       case "donor_removed_bulk":
@@ -76,13 +68,14 @@ export default function EventHistoryPanel({ eventId }) {
       case "tag_updated":
         return "Updated event tags";
       case "collaborator_added":
-        return `Added collaborator`;
+        return `Added collaborator${meta?.username ? ` ${meta.username}` : ""}`;
       case "collaborator_removed":
-        return `Removed collaborator`;
+        return `Removed collaborator${meta?.username ? ` ${meta.username}` : ""}`;
       default:
         return `${item.edit_type.replace(/_/g, " ")}`;
     }
   };
+  
 
   return (
     <Card>
