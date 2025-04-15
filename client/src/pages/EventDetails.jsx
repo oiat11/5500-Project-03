@@ -653,29 +653,37 @@ export default function EventDetails() {
               </CardHeader>
 
               <CardContent className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-500">Status</span>
-                  <span>{getStatusBadge(event.status)}</span>
-                </div>
-                <Separator />
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-500">Event Owner</span>
-                  <div className="flex items-center gap-2">
-                    <Avatar className="h-6 w-6">
-                      {event.createdBy?.avatar ? (
-                        <AvatarImage src={event.createdBy.avatar} />
-                      ) : (
-                        <AvatarFallback>
-                          {event.createdBy?.username?.charAt(0).toUpperCase() ||
-                            "?"}
-                        </AvatarFallback>
-                      )}
-                    </Avatar>
-                    <span>
-                      {event.createdBy?.username || `User #${event.created_by}`}
-                    </span>
-                  </div>
-                </div>
+  <div className="flex justify-between items-center">
+    <span className="text-gray-500">Status</span>
+    <span>{getStatusBadge(event.status)}</span>
+  </div>
+
+  <div className="flex justify-between items-center">
+  <span className="text-gray-500">Capacity</span>
+  <span className="flex items-center gap-1">
+    <Users className="h-4 w-4 text-gray-700" />
+    {event.capacity != null ? event.capacity : "N/A"}
+  </span>
+</div>
+<Separator />
+
+
+  <div className="flex justify-between items-center">
+    <span className="text-gray-500">Event Owner</span>
+    <div className="flex items-center gap-2">
+      <Avatar className="h-6 w-6">
+        {event.createdBy?.avatar ? (
+          <AvatarImage src={event.createdBy.avatar} />
+        ) : (
+          <AvatarFallback>
+            {event.createdBy?.username?.charAt(0).toUpperCase() || "?"}
+          </AvatarFallback>
+        )}
+      </Avatar>
+      <span>{event.createdBy?.username || `User #${event.created_by}`}</span>
+    </div>
+  </div>
+
 
                 {event.collaborators && event.collaborators.length > 0 && (
                   <div className="space-y-2">

@@ -42,35 +42,56 @@ export default function EventHistoryPanel({ eventId }) {
   }, [eventId, toast]);
 
   const getActionDescription = (item) => {
-    const meta = typeof item.meta === "string" ? JSON.parse(item.meta) : item.meta;
+    const meta =
+      typeof item.meta === "string" ? JSON.parse(item.meta) : item.meta;
 
-  
-    const blue = (text) => <span className="text-blue-600 font-medium">{text}</span>;
-  
+    const blue = (text) => (
+      <span className="text-blue-600 font-medium">{text}</span>
+    );
+
     switch (item.edit_type) {
       case "event_created":
         return <>Created event {blue(`"${item.new_value}"`)}</>;
       case "name_updated":
-        return <>Changed name from {blue(`"${item.old_value || "None"}"`)} to {blue(`"${item.new_value}"`)}</>;
+        return (
+          <>
+            Changed name from {blue(`"${item.old_value || "None"}"`)} to{" "}
+            {blue(`"${item.new_value}"`)}
+          </>
+        );
       case "location_updated":
-        return <>Changed location from {blue(`"${item.old_value || "None"}"`)} to {blue(`"${item.new_value || "None"}"`)} </>;
+        return (
+          <>
+            Changed location from {blue(`"${item.old_value || "None"}"`)} to{" "}
+            {blue(`"${item.new_value || "None"}"`)}{" "}
+          </>
+        );
       case "date_updated":
         return <>Changed date to {blue(meta?.formatted || item.new_value)}</>;
       case "status_updated":
-        return <>Changed status from {blue(`"${item.old_value}"`)} to {blue(`"${item.new_value}"`)}</>;
-        case "donor_status_updated":
-          return (
-            <>
-              Changed status of {blue(meta?.donorName || "a donor")} from {blue(`"${item.old_value}"`)} to {blue(`"${item.new_value}"`)}
-              {item.new_value === "declined" && meta?.declineReason && (
-                <>
-                  {" "}
-                  with reason: <span className="italic text-muted-foreground">"{meta.declineReason}"</span>
-                </>
-              )}
-            </>
-          );
-        
+        return (
+          <>
+            Changed status from {blue(`"${item.old_value}"`)} to{" "}
+            {blue(`"${item.new_value}"`)}
+          </>
+        );
+      case "donor_status_updated":
+        return (
+          <>
+            Changed status of {blue(meta?.donorName || "a donor")} from{" "}
+            {blue(`"${item.old_value}"`)} to {blue(`"${item.new_value}"`)}
+            {item.new_value === "declined" && meta?.declineReason && (
+              <>
+                {" "}
+                with reason:{" "}
+                <span className="italic text-muted-foreground">
+                  "{meta.declineReason}"
+                </span>
+              </>
+            )}
+          </>
+        );
+
       case "donor_added_bulk":
         return <>{blue(item.new_value)}</>;
       case "donor_removed_bulk":
@@ -80,13 +101,20 @@ export default function EventHistoryPanel({ eventId }) {
       case "collaborator_added":
         return <>Added collaborator {meta?.username && blue(meta.username)}</>;
       case "collaborator_removed":
-        return <>Removed collaborator {meta?.username && blue(meta.username)}</>;
+        return (
+          <>Removed collaborator {meta?.username && blue(meta.username)}</>
+        );
       default:
         return <>{item.edit_type.replace(/_/g, " ")}</>;
+      case "capacity_updated":
+        return (
+          <>
+            Changed capacity from {blue(`"${item.old_value || "None"}"`)} to{" "}
+            {blue(`"${item.new_value || "None"}"`)}
+          </>
+        );
     }
   };
-  
-  
 
   return (
     <Card>

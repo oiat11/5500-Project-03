@@ -221,7 +221,7 @@ export const deleteEvent = async (req, res, next) => {
 
 export const updateEventInfo = async (req, res, next) => {
   const { id } = req.params;
-  const { name, description, date, location, status, tagIds = [], donor_count } = req.body;
+  const { name, description, date, location, status, tagIds = [], capacity } = req.body;
 
   try {
     const existing = await prisma.event.findUnique({ where: { id } });
@@ -236,7 +236,7 @@ export const updateEventInfo = async (req, res, next) => {
           field === 'date'
             ? new Date(newValue).getTime() !== new Date(oldVal).getTime()
             : newValue?.toString() !== oldVal?.toString();
-      
+
         if (isDifferent) {
           recordEditHistory({
             event_id: id,
@@ -253,9 +253,10 @@ export const updateEventInfo = async (req, res, next) => {
     const formatWithOrdinal = (dateString) => {
       const dateObj = new Date(dateString);
       const day = dateObj.getDate();
-      const suffix = day % 10 === 1 && day !== 11 ? "st" : day % 10 === 2 && day !== 12 ? "nd" : day % 10 === 3 && day !== 13 ? "rd" : "th";
-      const formatted = `${dateObj.toLocaleString("en-US", { month: "long" })} ${day}${suffix}, ${dateObj.getFullYear()}`;
-      return formatted;
+      const suffix = day % 10 === 1 && day !== 11 ? "st" :
+                     day % 10 === 2 && day !== 12 ? "nd" :
+                     day % 10 === 3 && day !== 13 ? "rd" : "th";
+      return `${dateObj.toLocaleString("en-US", { month: "long" })} ${day}${suffix}, ${dateObj.getFullYear()}`;
     };
 
     track('name', name);
@@ -263,7 +264,7 @@ export const updateEventInfo = async (req, res, next) => {
     track('location', location);
     track('status', status);
     track('date', date, { formatted: date ? formatWithOrdinal(date) : null });
-    track('donor_count', donor_count);
+    track('capacity', capacity);
 
     for (const tagId of tagIds) {
       recordEditHistory({
@@ -282,7 +283,7 @@ export const updateEventInfo = async (req, res, next) => {
         date: date ? new Date(date) : undefined,
         location,
         status,
-        donor_count,
+        capacity: capacity !== undefined ? parseInt(capacity) : null,
         tags: { set: tagIds.map((tagId) => ({ id: tagId })) },
       },
       include: { tags: true },
@@ -293,6 +294,7 @@ export const updateEventInfo = async (req, res, next) => {
     next(err);
   }
 };
+
 
 export const updateDonorStatus = async (req, res, next) => {
   const { id: event_id } = req.params;
