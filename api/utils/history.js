@@ -1,9 +1,15 @@
-export const recordEditHistory = async (
-    { event_id, editor_id, edit_type, old_value = null, new_value = null },
-    tx
-  ) => {
-    if (!tx) throw new Error("Transaction client (tx) is required");
-    return tx.eventEditHistory.create({
+import { PrismaClient } from "@prisma/client";
+const prisma = new PrismaClient();
+
+export const recordEditHistory = async ({
+  event_id,
+  editor_id,
+  edit_type,
+  old_value = null,
+  new_value = null,
+}) => {
+  try {
+    await prisma.eventEditHistory.create({
       data: {
         event_id,
         editor_id,
@@ -12,5 +18,7 @@ export const recordEditHistory = async (
         new_value,
       },
     });
-  };
-  
+  } catch (err) {
+    console.error("Failed to record history:", err);
+  }
+};

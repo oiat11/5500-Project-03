@@ -54,6 +54,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import EditEventDetailsModal from "@/components/EditEventDetailsModal";
 import AddDonorsModal from "@/components/AddDonorsModal";
 import AddCollaboratorModal from "@/components/AddCollaboratorModal";
+import EventHistoryPanel from "@/components/EventHistoryPanel";
 
 export default function EventDetails() {
   const { id } = useParams();
@@ -582,6 +583,9 @@ export default function EventDetails() {
                 )}
               </CardContent>
             </Card>
+
+            {/* Add Event History Panel */}
+            <EventHistoryPanel eventId={id} />
           </div>
 
           {/* Sidebar */}
