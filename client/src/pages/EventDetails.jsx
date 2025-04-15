@@ -55,6 +55,7 @@ import EditEventDetailsModal from "@/components/EditEventDetailsModal";
 import AddDonorsModal from "@/components/AddDonorsModal";
 import AddCollaboratorModal from "@/components/AddCollaboratorModal";
 import EventHistoryPanel from "@/components/EventHistoryPanel";
+import { Textarea } from "@/components/ui/textarea";
 
 export default function EventDetails() {
   const { id } = useParams();
@@ -71,6 +72,10 @@ export default function EventDetails() {
   const [showAddDonors, setShowAddDonors] = useState(false);
   const [showAddCollaborator, setShowAddCollaborator] = useState(false);
   const [canEdit, setCanEdit] = useState(false);
+
+  // 用于管理当前哪个 donor 的 decline Dialog 正在显示，以及输入的理由
+  const [declineDialogOpen, setDeclineDialogOpen] = useState(null); // donorId 或 null
+  const [declineReason, setDeclineReason] = useState("");
 
   const [formData, setFormData] = useState({
     donors: [],
@@ -196,41 +201,31 @@ export default function EventDetails() {
   };
 
   const handleDonorStatusChange = async (donorId, newStatus) => {
+    if (newStatus !== "declined") {
+      await patchDonorStatus(donorId, newStatus);
+    }
+  };
+
+  const patchDonorStatus = async (donorId, status, reason = null) => {
     try {
       setSaving(true);
-
-      const updatedDonors = event.donors.map((donor) =>
-        donor.donor_id === donorId ? { ...donor, status: newStatus } : donor
-      );
-      setEvent((prev) => ({
-        ...prev,
-        donors: updatedDonors,
-      }));
-
       const response = await fetch(`/api/event/${id}/donor-status`, {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           donorId,
-          status: newStatus,
+          status,
+          ...(status === "declined" && reason ? { declineReason: reason } : {}),
         }),
       });
 
       if (!response.ok) throw new Error("Failed to update donor status");
 
-      toast({
-        title: "Status updated",
-        description: "Donor status has been updated successfully",
-      });
-    } catch (error) {
-      console.error("Error updating donor status:", error);
-      toast({
-        title: "Error",
-        description: "Failed to update donor status",
-        variant: "destructive",
-      });
+      toast({ title: "Status updated", description: "Donor status updated" });
+      fetchEventDetails();
+    } catch (err) {
+      console.error(err);
+      toast({ title: "Error", description: "Failed to update", variant: "destructive" });
     } finally {
       setSaving(false);
     }
@@ -281,7 +276,6 @@ export default function EventDetails() {
             </Button>
           </div>
           <div className="flex items-center gap-2">
-            {/* Only show edit and delete buttons if the user is the event owner */}
             {isEventOwner && (
               <>
                 <Button
@@ -306,16 +300,16 @@ export default function EventDetails() {
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Event Details</CardTitle>
                 {canEdit && (
-  <Button
-    size="sm"
-    variant="outline"
-    onClick={() => setShowEditDetails(true)}
-    className="flex items-center gap-1"
-  >
-    <Edit className="h-4 w-4" />
-    Edit Details
-  </Button>
-)}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setShowEditDetails(true)}
+                    className="flex items-center gap-1"
+                  >
+                    <Edit className="h-4 w-4" />
+                    Edit Details
+                  </Button>
+                )}
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -399,16 +393,16 @@ export default function EventDetails() {
                     </Badge>
                   </CardTitle>
                   {canEdit && (
-  <Button
-    size="sm"
-    variant="outline"
-    onClick={() => setShowAddDonors(true)}
-    className="flex items-center gap-1"
-  >
-    <PlusCircle className="h-4 w-4" />
-    Add Donors
-  </Button>
-)}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setShowAddDonors(true)}
+                      className="flex items-center gap-1"
+                    >
+                      <PlusCircle className="h-4 w-4" />
+                      Add Donors
+                    </Button>
+                  )}
                 </div>
               </CardHeader>
               <CardContent>
@@ -494,17 +488,20 @@ export default function EventDetails() {
                                 : "N/A"}
                             </TableCell>
                             <TableCell
-                              className="w-[40%] "
+                              className="w-[40%]"
                               onClick={(e) => e.stopPropagation()}
                             >
                               <div className="inline-block">
-                              <Select
-  value={donorEvent.status}
-  onValueChange={(value) =>
-    handleDonorStatusChange(donorEvent.donor_id, value)
-  }
-  disabled={!canEdit}
->
+                                <Select
+                                  value={donorEvent.status}
+                                  onValueChange={(value) =>
+                                    handleDonorStatusChange(
+                                      donorEvent.donor_id,
+                                      value
+                                    )
+                                  }
+                                  disabled={!canEdit}
+                                >
                                   <SelectTrigger className="w-[140px]">
                                     <SelectValue>
                                       {donorEvent.status === "invited" && (
@@ -555,6 +552,11 @@ export default function EventDetails() {
                                     <SelectItem
                                       value="declined"
                                       className="text-red-600"
+                                      onClick={(e) => {
+                                        e.preventDefault(); // 阻止 Select 默认关闭
+                                        setDeclineDialogOpen(donorEvent.donor_id);
+                                        setDeclineReason("");
+                                      }}
                                     >
                                       <span className="flex items-center">
                                         <span className="h-2 w-2 rounded-full bg-red-500 mr-2"></span>
@@ -573,6 +575,55 @@ export default function EventDetails() {
                                   </SelectContent>
                                 </Select>
                               </div>
+                              {/* 如果当前 donor 被选中为 declined，弹出 Dialog 输入理由 */}
+                              {declineDialogOpen === donorEvent.donor_id && (
+                                <Dialog
+                                  open
+                                  onOpenChange={(open) => {
+                                    if (!open) {
+                                      setDeclineDialogOpen(null);
+                                    }
+                                  }}
+                                >
+                                  <DialogContent>
+                                    <DialogHeader>
+                                      <DialogTitle>
+                                        Reason for Decline
+                                      </DialogTitle>
+                                      <DialogDescription>
+                                        Please enter a reason for declining:
+                                      </DialogDescription>
+                                    </DialogHeader>
+                                    <Textarea
+                                      placeholder="Enter reason..."
+                                      value={declineReason}
+                                      onChange={(e) =>
+                                        setDeclineReason(e.target.value)
+                                      }
+                                    />
+                                    <DialogFooter>
+                                      <Button
+                                        variant="outline"
+                                        onClick={() =>
+                                          setDeclineDialogOpen(null)
+                                        }
+                                      >
+                                        Cancel
+                                      </Button>
+                                      <Button
+  onClick={async () => {
+    await patchDonorStatus(donorEvent.donor_id, "declined", declineReason);
+    setDeclineDialogOpen(null);
+  }}
+  disabled={!declineReason.trim() || saving}
+>
+  {saving ? "Saving..." : "Save"}
+</Button>
+
+                                    </DialogFooter>
+                                  </DialogContent>
+                                </Dialog>
+                              )}
                             </TableCell>
                           </TableRow>
                         ))}
@@ -632,33 +683,34 @@ export default function EventDetails() {
                   </div>
                 </div>
 
-{/* Add Collaborators section */}
-{event.collaborators && event.collaborators.length > 0 && (
-  <>
-
-    <div className="space-y-2">
-      <span className="text-gray-500">Collaborators</span>
-      <div className="flex flex-col gap-2 mt-2">
-        {event.collaborators.map((collaborator) => (
-          <div key={collaborator.user.id} className="flex items-center gap-2">
-            <Avatar className="h-6 w-6">
-              {collaborator.user.avatar ? (
-                <AvatarImage src={collaborator.user.avatar} />
-              ) : (
-                <AvatarFallback>
-                  {collaborator.user.username?.charAt(0).toUpperCase() || "?"}
-                </AvatarFallback>
-              )}
-            </Avatar>
-            <span className="text-sm">{collaborator.user.username}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  </>
-)}
-
-<Separator />
+                {event.collaborators && event.collaborators.length > 0 && (
+                  <div className="space-y-2">
+                    <span className="text-gray-500">Collaborators</span>
+                    <div className="flex flex-col gap-2 mt-2">
+                      {event.collaborators.map((collaborator) => (
+                        <div
+                          key={collaborator.user.id}
+                          className="flex items-center gap-2"
+                        >
+                          <Avatar className="h-6 w-6">
+                            {collaborator.user.avatar ? (
+                              <AvatarImage src={collaborator.user.avatar} />
+                            ) : (
+                              <AvatarFallback>
+                                {collaborator.user.username?.charAt(0).toUpperCase() ||
+                                  "?"}
+                              </AvatarFallback>
+                            )}
+                          </Avatar>
+                          <span className="text-sm">
+                            {collaborator.user.username}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <Separator />
                 <div className="flex justify-between items-center">
                   <span className="text-gray-500">Created</span>
                   <span>
@@ -737,8 +789,7 @@ export default function EventDetails() {
           <DialogHeader>
             <DialogTitle>Delete Event</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete this event? This action cannot be
-              undone.
+              Are you sure you want to delete this event? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -822,13 +873,12 @@ export default function EventDetails() {
           ...d.donor,
         }))}
       />
-<AddCollaboratorModal
-  open={showAddCollaborator}
-  onClose={() => setShowAddCollaborator(false)}
-  eventId={id}
-  onSuccess={fetchEventDetails}
-/>
-
+      <AddCollaboratorModal
+        open={showAddCollaborator}
+        onClose={() => setShowAddCollaborator(false)}
+        eventId={id}
+        onSuccess={fetchEventDetails}
+      />
     </div>
   );
 }

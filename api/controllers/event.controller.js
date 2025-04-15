@@ -230,15 +230,23 @@ export const updateEventInfo = async (req, res, next) => {
     const editorId = req.user?.id;
 
     const track = (field, newValue, meta = null) => {
-      if (newValue !== undefined && newValue?.toString() !== existing[field]?.toString()) {
-        recordEditHistory({
-          event_id: id,
-          editor_id: editorId,
-          edit_type: `${field}_updated`,
-          old_value: existing[field]?.toString() || null,
-          new_value: newValue?.toString() || null,
-          meta: meta ? JSON.stringify(meta) : null,
-        }, prisma);
+      if (newValue !== undefined) {
+        const oldVal = existing[field];
+        const isDifferent =
+          field === 'date'
+            ? new Date(newValue).getTime() !== new Date(oldVal).getTime()
+            : newValue?.toString() !== oldVal?.toString();
+      
+        if (isDifferent) {
+          recordEditHistory({
+            event_id: id,
+            editor_id: editorId,
+            edit_type: `${field}_updated`,
+            old_value: oldVal?.toString() || null,
+            new_value: newValue?.toString() || null,
+            meta: meta ? JSON.stringify(meta) : null,
+          }, prisma);
+        }
       }
     };
 
@@ -288,7 +296,7 @@ export const updateEventInfo = async (req, res, next) => {
 
 export const updateDonorStatus = async (req, res, next) => {
   const { id: event_id } = req.params;
-  const { donorId, status } = req.body;
+  const { donorId, status, declineReason } = req.body;
 
   try {
     const existing = await prisma.donorEvent.findUnique({
@@ -299,11 +307,12 @@ export const updateDonorStatus = async (req, res, next) => {
       return res.status(404).json({ error: 'Donor not part of this event' });
     }
 
-    const donor = await prisma.donor.findUnique({ where: { id: donorId } });
+    const updatesToEvent = { status };
+    const updatesToDonor = {};
 
-    let previousStatus = existing.status;
-    let updatesToEvent = { status };
-    let updatesToDonor = {};
+    if (status === 'declined') {
+      updatesToEvent.decline_reason = declineReason || null;
+    }
 
     if (!existing.counted_invitation && (status === 'invited' || status === 'confirmed')) {
       updatesToEvent.counted_invitation = true;
@@ -315,31 +324,41 @@ export const updateDonorStatus = async (req, res, next) => {
       updatesToDonor.total_attendance = { increment: 1 };
     }
 
-    await prisma.$transaction(async (tx) => {
-      await tx.donorEvent.update({
-        where: { donor_id_event_id: { donor_id: donorId, event_id } },
-        data: updatesToEvent,
-      });
-
-      if (Object.keys(updatesToDonor).length > 0) {
-        await tx.donor.update({ where: { id: donorId }, data: updatesToDonor });
-      }
-    });
-
-    recordEditHistory({
-      event_id,
-      editor_id: req.user.id,
-      edit_type: 'donor_status_updated',
-      old_value: previousStatus,
-      new_value: status,
-      meta: JSON.stringify({ donorName: `${donor.first_name} ${donor.last_name}` }),
-    }, prisma);
+    await prisma.$transaction(
+      [
+        prisma.donorEvent.update({
+          where: { donor_id_event_id: { donor_id: donorId, event_id } },
+          data: updatesToEvent,
+        }),
+    
+        Object.keys(updatesToDonor).length > 0
+          ? prisma.donor.update({
+              where: { id: donorId },
+              data: updatesToDonor,
+            })
+          : undefined,
+      ].filter(Boolean)
+    );
+    
+    await recordEditHistory(
+      {
+        event_id,
+        editor_id: req.user.id,
+        edit_type: "donor_status_updated",
+        old_value: existing.status,
+        new_value: status,
+        meta: status === "declined" ? { declineReason } : undefined,
+      },
+      prisma
+    );
+    
 
     res.status(200).json({ success: true, message: 'Donor status updated' });
   } catch (err) {
     next(err);
   }
 };
+
 
 export const addOrRemoveDonors = async (req, res, next) => {
   const { id: event_id } = req.params;

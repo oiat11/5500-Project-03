@@ -42,7 +42,8 @@ export default function EventHistoryPanel({ eventId }) {
   }, [eventId, toast]);
 
   const getActionDescription = (item) => {
-    const meta = item.meta ? JSON.parse(item.meta) : null;
+    const meta = typeof item.meta === "string" ? JSON.parse(item.meta) : item.meta;
+
   
     const blue = (text) => <span className="text-blue-600 font-medium">{text}</span>;
   
@@ -57,8 +58,19 @@ export default function EventHistoryPanel({ eventId }) {
         return <>Changed date to {blue(meta?.formatted || item.new_value)}</>;
       case "status_updated":
         return <>Changed status from {blue(`"${item.old_value}"`)} to {blue(`"${item.new_value}"`)}</>;
-      case "donor_status_updated":
-        return <>Changed status of {blue(meta?.donorName || "a donor")} from {blue(`"${item.old_value}"`)} to {blue(`"${item.new_value}"`)}</>;
+        case "donor_status_updated":
+          return (
+            <>
+              Changed status of {blue(meta?.donorName || "a donor")} from {blue(`"${item.old_value}"`)} to {blue(`"${item.new_value}"`)}
+              {item.new_value === "declined" && meta?.declineReason && (
+                <>
+                  {" "}
+                  with reason: <span className="italic text-muted-foreground">"{meta.declineReason}"</span>
+                </>
+              )}
+            </>
+          );
+        
       case "donor_added_bulk":
         return <>{blue(item.new_value)}</>;
       case "donor_removed_bulk":
