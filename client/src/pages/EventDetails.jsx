@@ -70,6 +70,7 @@ export default function EventDetails() {
   const [saving, setSaving] = useState(false);
   const [showAddDonors, setShowAddDonors] = useState(false);
   const [showAddCollaborator, setShowAddCollaborator] = useState(false);
+  const [canEdit, setCanEdit] = useState(false);
 
   const [formData, setFormData] = useState({
     donors: [],
@@ -99,6 +100,7 @@ export default function EventDetails() {
       const data = await response.json();
       setEvent(data.event);
       setIsEventOwner(data.isEventOwner);
+      setCanEdit(data.isEventOwner || data.isEventCollaborator);
 
       setFormData({
         donors: data.event.donors.map((donorEvent) => ({
@@ -303,17 +305,17 @@ export default function EventDetails() {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Event Details</CardTitle>
-                {isEventOwner && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setShowEditDetails(true)}
-                    className="flex items-center gap-1"
-                  >
-                    <Edit className="h-4 w-4" />
-                    Edit Details
-                  </Button>
-                )}
+                {canEdit && (
+  <Button
+    size="sm"
+    variant="outline"
+    onClick={() => setShowEditDetails(true)}
+    className="flex items-center gap-1"
+  >
+    <Edit className="h-4 w-4" />
+    Edit Details
+  </Button>
+)}
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -396,17 +398,17 @@ export default function EventDetails() {
                       {event.donors?.length || 0} donors
                     </Badge>
                   </CardTitle>
-                  {isEventOwner && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setShowAddDonors(true)}
-                      className="flex items-center gap-1"
-                    >
-                      <PlusCircle className="h-4 w-4" />
-                      Add Donors
-                    </Button>
-                  )}
+                  {canEdit && (
+  <Button
+    size="sm"
+    variant="outline"
+    onClick={() => setShowAddDonors(true)}
+    className="flex items-center gap-1"
+  >
+    <PlusCircle className="h-4 w-4" />
+    Add Donors
+  </Button>
+)}
                 </div>
               </CardHeader>
               <CardContent>
@@ -496,16 +498,13 @@ export default function EventDetails() {
                               onClick={(e) => e.stopPropagation()}
                             >
                               <div className="inline-block">
-                                <Select
-                                  value={donorEvent.status}
-                                  onValueChange={(value) =>
-                                    handleDonorStatusChange(
-                                      donorEvent.donor_id,
-                                      value
-                                    )
-                                  }
-                                  disabled={!isEventOwner}
-                                >
+                              <Select
+  value={donorEvent.status}
+  onValueChange={(value) =>
+    handleDonorStatusChange(donorEvent.donor_id, value)
+  }
+  disabled={!canEdit}
+>
                                   <SelectTrigger className="w-[140px]">
                                     <SelectValue>
                                       {donorEvent.status === "invited" && (

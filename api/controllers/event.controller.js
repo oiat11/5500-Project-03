@@ -97,53 +97,45 @@ export const getEventById = async (req, res, next) => {
           include: {
             donor: {
               include: {
-                tags: {
-                  include: { tag: true },
-                },
+                tags: { include: { tag: true } },
               },
             },
           },
         },
         createdBy: {
-          select: {
-            username: true,
-            avatar: true,
-          },
+          select: { username: true, avatar: true },
         },
         collaborators: {
           include: {
-            user: {
-              select: {
-                id: true,
-                username: true,
-                avatar: true,
-              },
-            },
+            user: { select: { id: true, username: true, avatar: true } },
           },
         },
       },
     });
 
     if (!event) {
-      return res.status(404).json({
-        success: false,
-        message: "Event not found",
-      });
+      return res.status(404).json({ success: false, message: "Event not found" });
     }
 
-    const isEventOwner = req.user?.id === event.created_by;
+    const currentUserId = req.user?.id;
+
+    const isEventOwner = currentUserId === event.created_by;
+
+    const isEventCollaborator = event.collaborators.some(
+      (c) => c.user.id === currentUserId
+    );
 
     res.status(200).json({
       success: true,
       message: "Event fetched successfully",
       event,
       isEventOwner,
+      isEventCollaborator,
     });
   } catch (err) {
     next(err);
   }
 };
-
 
 
 // Update Event
