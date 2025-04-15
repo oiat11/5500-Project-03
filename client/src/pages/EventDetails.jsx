@@ -73,8 +73,7 @@ export default function EventDetails() {
   const [showAddCollaborator, setShowAddCollaborator] = useState(false);
   const [canEdit, setCanEdit] = useState(false);
 
-  // 用于管理当前哪个 donor 的 decline Dialog 正在显示，以及输入的理由
-  const [declineDialogOpen, setDeclineDialogOpen] = useState(null); // donorId 或 null
+  const [declineDialogOpen, setDeclineDialogOpen] = useState(null);
   const [declineReason, setDeclineReason] = useState("");
 
   const [formData, setFormData] = useState({
@@ -492,16 +491,19 @@ export default function EventDetails() {
                               onClick={(e) => e.stopPropagation()}
                             >
                               <div className="inline-block">
-                                <Select
-                                  value={donorEvent.status}
-                                  onValueChange={(value) =>
-                                    handleDonorStatusChange(
-                                      donorEvent.donor_id,
-                                      value
-                                    )
-                                  }
-                                  disabled={!canEdit}
-                                >
+                              <Select
+  value={donorEvent.status}
+  onValueChange={(value) => {
+    if (value === "declined") {
+      setDeclineDialogOpen(donorEvent.donor_id);
+      setDeclineReason("");
+      return; 
+    }
+    handleDonorStatusChange(donorEvent.donor_id, value);
+  }}
+  disabled={!canEdit}
+>
+
                                   <SelectTrigger className="w-[140px]">
                                     <SelectValue>
                                       {donorEvent.status === "invited" && (
@@ -549,15 +551,7 @@ export default function EventDetails() {
                                         Confirmed
                                       </span>
                                     </SelectItem>
-                                    <SelectItem
-                                      value="declined"
-                                      className="text-red-600"
-                                      onClick={(e) => {
-                                        e.preventDefault(); // 阻止 Select 默认关闭
-                                        setDeclineDialogOpen(donorEvent.donor_id);
-                                        setDeclineReason("");
-                                      }}
-                                    >
+                                    <SelectItem value="declined">
                                       <span className="flex items-center">
                                         <span className="h-2 w-2 rounded-full bg-red-500 mr-2"></span>
                                         Declined
