@@ -27,6 +27,7 @@ export default function EditEventDetailsModal({
     location: "",
     description: "",
     status: "draft",
+    capacity: "",
   });
   const [saving, setSaving] = useState(false);
 
@@ -38,13 +39,14 @@ export default function EditEventDetailsModal({
         location: eventData.location || "",
         description: eventData.description || "",
         status: eventData.status || "draft",
+        capacity: eventData.capacity?.toString() || "",
       });
     }
   }, [eventData]);
 
   const handleSave = async () => {
     try {
-      setSaving(true); // 开始保存
+      setSaving(true);
       const fixedDate = new Date(`${formData.date}T12:00:00`);
 
       const res = await fetch(`/api/event/${eventData.id}/info`, {
@@ -56,6 +58,7 @@ export default function EditEventDetailsModal({
           date: fixedDate.toISOString(),
           location: formData.location,
           status: formData.status,
+          capacity: formData.capacity ? parseInt(formData.capacity) : null,
           tagIds: formData.tags?.map((tag) => tag.value) || [],
         }),
       });
@@ -95,68 +98,61 @@ export default function EditEventDetailsModal({
             </p>
 
             <div className="space-y-2">
-              <Label htmlFor="name" className="mb-1 block">
-                Name <span className="text-red-500">*</span>
-              </Label>
+              <Label htmlFor="name">Name <span className="text-red-500">*</span></Label>
               <Input
                 id="name"
                 value={formData.name}
-                onChange={(e) =>
-                  setFormData({ ...formData, name: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 required
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="description" className="mb-1 block">
-                Description
-              </Label>
+              <Label htmlFor="description">Description</Label>
               <Textarea
                 id="description"
                 value={formData.description}
-                onChange={(e) =>
-                  setFormData({ ...formData, description: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="date" className="mb-1 block">
-                Date <span className="text-red-500">*</span>
-              </Label>
+              <Label htmlFor="date">Date <span className="text-red-500">*</span></Label>
               <Input
                 type="date"
                 id="date"
                 value={formData.date}
-                onChange={(e) =>
-                  setFormData({ ...formData, date: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, date: e.target.value })}
                 required
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="location" className="mb-1 block">
-                Location <span className="text-red-500">*</span>
-              </Label>
+              <Label htmlFor="location">Location <span className="text-red-500">*</span></Label>
               <Input
                 id="location"
                 value={formData.location}
-                onChange={(e) =>
-                  setFormData({ ...formData, location: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
                 required
               />
             </div>
 
             <div className="space-y-2">
-              <Label className="mb-1 block">Status</Label>
+              <Label htmlFor="capacity">Capacity</Label>
+              <Input
+                id="capacity"
+                type="number"
+                min={0}
+                value={formData.capacity}
+                onChange={(e) => setFormData({ ...formData, capacity: e.target.value })}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Status</Label>
               <Select
                 value={formData.status}
-                onValueChange={(val) =>
-                  setFormData({ ...formData, status: val })
-                }
+                onValueChange={(val) => setFormData({ ...formData, status: val })}
               >
                 <SelectTrigger>
                   <SelectValue />
