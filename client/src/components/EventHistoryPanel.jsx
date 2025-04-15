@@ -17,11 +17,11 @@ export default function EventHistoryPanel({ eventId }) {
       try {
         setLoading(true);
         const response = await fetch(`/api/event/${eventId}/history`);
-        
+
         if (!response.ok) {
           throw new Error("Failed to fetch event history");
         }
-        
+
         const data = await response.json();
         setHistory(data.history || []);
       } catch (error) {
@@ -42,21 +42,31 @@ export default function EventHistoryPanel({ eventId }) {
   }, [eventId, toast]);
 
   const getActionDescription = (item) => {
+    const meta = item.meta ? JSON.parse(item.meta) : null;
+
     switch (item.edit_type) {
       case "event_created":
         return `Created event "${item.new_value}"`;
       case "name_updated":
-        return `Changed name from "${item.old_value || 'None'}" to "${item.new_value}"`;
+        return `Changed name from "${item.old_value || "None"}" to "${
+          item.new_value
+        }"`;
       case "description_updated":
         return "Updated event description";
       case "location_updated":
-        return `Changed location from "${item.old_value || 'None'}" to "${item.new_value || 'None'}"`;
+        return `Changed location from "${item.old_value || "None"}" to "${
+          item.new_value || "None"
+        }"`;
       case "date_updated":
-        return "Updated event date";
+        return `Changed date to "${meta?.formatted || item.new_value}"`;
       case "status_updated":
-        return `Changed status from "${item.old_value || 'None'}" to "${item.new_value}"`;
+        return `Changed status from "${item.old_value || "None"}" to "${
+          item.new_value
+        }"`;
       case "donor_status_updated":
-        return `Changed donor status from "${item.old_value}" to "${item.new_value}"`;
+        return `Changed status of ${meta?.donorName || "a donor"} from "${
+          item.old_value
+        }" to "${item.new_value}"`;
       case "donor_added_bulk":
         return item.new_value;
       case "donor_removed_bulk":
@@ -119,12 +129,19 @@ export default function EventHistoryPanel({ eventId }) {
                             {item.editor?.username || `User #${item.editor_id}`}
                           </span>
                           <span className="text-xs text-muted-foreground">
-                            {formatDistanceToNow(new Date(item.created_at), { addSuffix: true })}
+                            {formatDistanceToNow(new Date(item.created_at), {
+                              addSuffix: true,
+                            })}
                           </span>
                         </div>
-                        <p className="text-sm mt-1">{getActionDescription(item)}</p>
+                        <p className="text-sm mt-1">
+                          {getActionDescription(item)}
+                        </p>
                         <span className="text-xs text-muted-foreground mt-1">
-                          {format(new Date(item.created_at), "MMM d, yyyy 'at' h:mm a")}
+                          {format(
+                            new Date(item.created_at),
+                            "MMM d, yyyy 'at' h:mm a"
+                          )}
                         </span>
                       </div>
                     </div>

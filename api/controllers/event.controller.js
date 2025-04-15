@@ -25,19 +25,16 @@ export const createEventWithDonors = async (req, res, next) => {
         },
       },
       include: {
-        donors: {
-          include: { donor: true },
-        },
+        donors: { include: { donor: true } },
       },
     });
 
-    // ✅ 非事务方式记录历史
     recordEditHistory({
       event_id: event.id,
       editor_id: req.user.id,
       edit_type: 'event_created',
       new_value: name,
-    });
+    }, prisma);
 
     if (donors.length > 0) {
       recordEditHistory({
@@ -45,20 +42,14 @@ export const createEventWithDonors = async (req, res, next) => {
         editor_id: req.user.id,
         edit_type: 'donor_initialized',
         new_value: `${donors.length} donors`,
-      });
+      }, prisma);
     }
 
-    res.status(201).json({
-      success: true,
-      message: "Event created successfully",
-      event,
-    });
+    res.status(201).json({ success: true, message: "Event created successfully", event });
   } catch (err) {
     next(err);
   }
 };
-
-
 
 // Get All Events
 export const getEvents = async (req, res, next) => {
@@ -246,7 +237,7 @@ export const updateEventInfo = async (req, res, next) => {
 
     const editorId = req.user?.id;
 
-    const track = (field, newValue) => {
+    const track = (field, newValue, meta = null) => {
       if (newValue !== undefined && newValue?.toString() !== existing[field]?.toString()) {
         recordEditHistory({
           event_id: id,
@@ -254,15 +245,24 @@ export const updateEventInfo = async (req, res, next) => {
           edit_type: `${field}_updated`,
           old_value: existing[field]?.toString() || null,
           new_value: newValue?.toString() || null,
-        });
+          meta: meta ? JSON.stringify(meta) : null,
+        }, prisma);
       }
+    };
+
+    const formatWithOrdinal = (dateString) => {
+      const dateObj = new Date(dateString);
+      const day = dateObj.getDate();
+      const suffix = day % 10 === 1 && day !== 11 ? "st" : day % 10 === 2 && day !== 12 ? "nd" : day % 10 === 3 && day !== 13 ? "rd" : "th";
+      const formatted = `${dateObj.toLocaleString("en-US", { month: "long" })} ${day}${suffix}, ${dateObj.getFullYear()}`;
+      return formatted;
     };
 
     track('name', name);
     track('description', description);
     track('location', location);
     track('status', status);
-    track('date', date);
+    track('date', date, { formatted: date ? formatWithOrdinal(date) : null });
     track('donor_count', donor_count);
 
     for (const tagId of tagIds) {
@@ -271,7 +271,7 @@ export const updateEventInfo = async (req, res, next) => {
         editor_id: editorId,
         edit_type: 'tag_updated',
         new_value: tagId,
-      });
+      }, prisma);
     }
 
     const event = await prisma.event.update({
@@ -283,9 +283,7 @@ export const updateEventInfo = async (req, res, next) => {
         location,
         status,
         donor_count,
-        tags: {
-          set: tagIds.map((tagId) => ({ id: tagId })),
-        },
+        tags: { set: tagIds.map((tagId) => ({ id: tagId })) },
       },
       include: { tags: true },
     });
@@ -308,6 +306,8 @@ export const updateDonorStatus = async (req, res, next) => {
     if (!existing) {
       return res.status(404).json({ error: 'Donor not part of this event' });
     }
+
+    const donor = await prisma.donor.findUnique({ where: { id: donorId } });
 
     let previousStatus = existing.status;
     let updatesToEvent = { status };
@@ -340,7 +340,8 @@ export const updateDonorStatus = async (req, res, next) => {
       edit_type: 'donor_status_updated',
       old_value: previousStatus,
       new_value: status,
-    });
+      meta: JSON.stringify({ donorName: `${donor.first_name} ${donor.last_name}` }),
+    }, prisma);
 
     res.status(200).json({ success: true, message: 'Donor status updated' });
   } catch (err) {

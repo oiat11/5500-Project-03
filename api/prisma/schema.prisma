@@ -187,12 +187,14 @@ model EventEditHistory {
   old_value    String?  @db.Text
   new_value    String?  @db.Text
 
+  meta         Json?
   created_at   DateTime @default(now())
 
   @@index([event_id])
   @@index([editor_id])
   @@map("Event_Edit_History")
 }
+
 
 
 
