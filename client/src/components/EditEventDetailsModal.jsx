@@ -12,14 +12,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-export default function EditEventDetailsModal({ open, onClose, eventData, onSave }) {
+export default function EditEventDetailsModal({
+  open,
+  onClose,
+  eventData,
+  onSave,
+}) {
   const { toast } = useToast();
   const [formData, setFormData] = useState({
     name: "",
@@ -28,6 +28,7 @@ export default function EditEventDetailsModal({ open, onClose, eventData, onSave
     description: "",
     status: "draft",
   });
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (eventData) {
@@ -43,8 +44,9 @@ export default function EditEventDetailsModal({ open, onClose, eventData, onSave
 
   const handleSave = async () => {
     try {
+      setSaving(true); // 开始保存
       const fixedDate = new Date(`${formData.date}T12:00:00`);
-  
+
       const res = await fetch(`/api/event/${eventData.id}/info`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -57,11 +59,14 @@ export default function EditEventDetailsModal({ open, onClose, eventData, onSave
           tagIds: formData.tags?.map((tag) => tag.value) || [],
         }),
       });
-  
+
       if (!res.ok) throw new Error("Update failed");
-  
-      toast({ title: "Success", description: "Event details updated successfully" });
-  
+
+      toast({
+        title: "Success",
+        description: "Event details updated successfully",
+      });
+
       if (onSave) onSave();
       onClose();
     } catch (err) {
@@ -71,9 +76,11 @@ export default function EditEventDetailsModal({ open, onClose, eventData, onSave
         description: "Failed to update event details",
         variant: "destructive",
       });
+    } finally {
+      setSaving(false);
     }
   };
-  
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-xl" hideCloseButton>
@@ -83,7 +90,8 @@ export default function EditEventDetailsModal({ open, onClose, eventData, onSave
           </CardHeader>
           <CardContent className="space-y-6">
             <p className="text-sm text-muted-foreground italic">
-              Fields marked with <span className="text-red-500">*</span> are required.
+              Fields marked with <span className="text-red-500">*</span> are
+              required.
             </p>
 
             <div className="space-y-2">
@@ -93,17 +101,23 @@ export default function EditEventDetailsModal({ open, onClose, eventData, onSave
               <Input
                 id="name"
                 value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, name: e.target.value })
+                }
                 required
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="description" className="mb-1 block">Description</Label>
+              <Label htmlFor="description" className="mb-1 block">
+                Description
+              </Label>
               <Textarea
                 id="description"
                 value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, description: e.target.value })
+                }
               />
             </div>
 
@@ -115,7 +129,9 @@ export default function EditEventDetailsModal({ open, onClose, eventData, onSave
                 type="date"
                 id="date"
                 value={formData.date}
-                onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, date: e.target.value })
+                }
                 required
               />
             </div>
@@ -127,7 +143,9 @@ export default function EditEventDetailsModal({ open, onClose, eventData, onSave
               <Input
                 id="location"
                 value={formData.location}
-                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, location: e.target.value })
+                }
                 required
               />
             </div>
@@ -136,7 +154,9 @@ export default function EditEventDetailsModal({ open, onClose, eventData, onSave
               <Label className="mb-1 block">Status</Label>
               <Select
                 value={formData.status}
-                onValueChange={(val) => setFormData({ ...formData, status: val })}
+                onValueChange={(val) =>
+                  setFormData({ ...formData, status: val })
+                }
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -152,10 +172,12 @@ export default function EditEventDetailsModal({ open, onClose, eventData, onSave
         </Card>
 
         <DialogFooter className="mt-4">
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="outline" onClick={onClose} disabled={saving}>
             Cancel
           </Button>
-          <Button onClick={handleSave}>Save Changes</Button>
+          <Button onClick={handleSave} disabled={saving}>
+            {saving ? "Saving..." : "Save Changes"}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
