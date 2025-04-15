@@ -1,9 +1,9 @@
 import { PrismaClient } from '@prisma/client';
 import { errorHandler } from '../utils/error.js';
+import { recordEditHistory } from '../utils/history.js';
 
 const prisma = new PrismaClient();
 
-// Create Event with Tags and Donors
 export const createEventWithDonors = async (req, res, next) => {
   const { name, description, date, location, tagIds = [], donors = [], status, capacity } = req.body;
 
@@ -17,9 +17,6 @@ export const createEventWithDonors = async (req, res, next) => {
         status,
         capacity: capacity ? parseInt(capacity) : null,
         created_by: req.user.id,
-        tags: {
-          connect: tagIds.map((id) => ({ id })),
-        },
         donors: {
           create: donors.map((d) => ({
             donor: { connect: { id: d.donorId } },
@@ -28,12 +25,32 @@ export const createEventWithDonors = async (req, res, next) => {
         },
       },
       include: {
-        tags: true,
         donors: {
           include: { donor: true },
         },
       },
     });
+
+    // 添加编辑历史记录（创建事件 + 初始 donors）
+    const history = [
+      recordEditHistory({
+        event_id: event.id,
+        editor_id: req.user.id,
+        edit_type: 'event_created',
+        new_value: name,
+      }, prisma)
+    ];
+
+    if (donors.length > 0) {
+      history.push(recordEditHistory({
+        event_id: event.id,
+        editor_id: req.user.id,
+        edit_type: 'donor_initialized',
+        new_value: `${donors.length} donors`,
+      }, prisma));
+    }
+
+    await Promise.all(history);
 
     res.status(201).json({
       success: true,
@@ -80,8 +97,6 @@ export const getEvents = async (req, res, next) => {
 };
 
 
-
-// Get Event by ID
 // Get Event by ID
 export const getEventById = async (req, res, next) => {
   const { id } = req.params;
@@ -230,6 +245,40 @@ export const updateEventInfo = async (req, res, next) => {
   const { name, description, date, location, status, tagIds = [], donor_count } = req.body;
 
   try {
+    const existing = await prisma.event.findUnique({ where: { id } });
+    if (!existing) return res.status(404).json({ message: 'Event not found' });
+
+    const editorId = req.user?.id;
+    const history = [];
+
+    const track = (field, newValue) => {
+      if (newValue !== undefined && newValue?.toString() !== existing[field]?.toString()) {
+        history.push(recordEditHistory({
+          event_id: id,
+          editor_id: editorId,
+          edit_type: `${field}_updated`,
+          old_value: existing[field]?.toString() || null,
+          new_value: newValue?.toString() || null,
+        }));
+      }
+    };
+
+    track('name', name);
+    track('description', description);
+    track('location', location);
+    track('status', status);
+    track('date', date);
+    track('donor_count', donor_count);
+
+    for (const tagId of tagIds) {
+      history.push(recordEditHistory({
+        event_id: id,
+        editor_id: editorId,
+        edit_type: 'tag_updated',
+        new_value: tagId,
+      }));
+    }
+
     const event = await prisma.event.update({
       where: { id },
       data: {
@@ -245,6 +294,8 @@ export const updateEventInfo = async (req, res, next) => {
       },
       include: { tags: true },
     });
+
+    await Promise.all(history);
 
     res.status(200).json({ success: true, message: 'Event info updated', event });
   } catch (err) {
@@ -265,28 +316,37 @@ export const updateDonorStatus = async (req, res, next) => {
       return res.status(404).json({ error: 'Donor not part of this event' });
     }
 
-    const updatesToEvent = { status };
-    const updatesToDonor = {};
+    await prisma.$transaction(async (tx) => {
+      await recordEditHistory({
+        event_id,
+        editor_id: req.user.id,
+        edit_type: 'donor_status_updated',
+        old_value: existing.status,
+        new_value: status,
+      }, tx);
 
-    if (!existing.counted_invitation && (status === 'invited' || status === 'confirmed')) {
-      updatesToEvent.counted_invitation = true;
-      updatesToDonor.total_invitations = { increment: 1 };
-    }
+      const updatesToEvent = { status };
+      const updatesToDonor = {};
 
-    if (!existing.counted_attendance && status === 'attended') {
-      updatesToEvent.counted_attendance = true;
-      updatesToDonor.total_attendance = { increment: 1 };
-    }
+      if (!existing.counted_invitation && (status === 'invited' || status === 'confirmed')) {
+        updatesToEvent.counted_invitation = true;
+        updatesToDonor.total_invitations = { increment: 1 };
+      }
 
-    await prisma.$transaction([
-      prisma.donorEvent.update({
+      if (!existing.counted_attendance && status === 'attended') {
+        updatesToEvent.counted_attendance = true;
+        updatesToDonor.total_attendance = { increment: 1 };
+      }
+
+      await tx.donorEvent.update({
         where: { donor_id_event_id: { donor_id: donorId, event_id } },
         data: updatesToEvent,
-      }),
-      Object.keys(updatesToDonor).length > 0
-        ? prisma.donor.update({ where: { id: donorId }, data: updatesToDonor })
-        : undefined,
-    ].filter(Boolean));
+      });
+
+      if (Object.keys(updatesToDonor).length > 0) {
+        await tx.donor.update({ where: { id: donorId }, data: updatesToDonor });
+      }
+    });
 
     res.status(200).json({ success: true, message: 'Donor status updated' });
   } catch (err) {
@@ -296,7 +356,10 @@ export const updateDonorStatus = async (req, res, next) => {
 
 export const addOrRemoveDonors = async (req, res, next) => {
   const { id: event_id } = req.params;
-  const { donors = [] } = req.body; // [{ donorId, action: 'add' | 'remove', status }]
+  const { donors = [] } = req.body;
+
+  let addedCount = 0;
+  let removedCount = 0;
 
   try {
     await prisma.$transaction(async (tx) => {
@@ -307,6 +370,7 @@ export const addOrRemoveDonors = async (req, res, next) => {
           await tx.donorEvent.delete({
             where: { donor_id_event_id: { donor_id: donorId, event_id } },
           });
+          removedCount++;
         }
 
         if (action === 'add') {
@@ -319,6 +383,7 @@ export const addOrRemoveDonors = async (req, res, next) => {
               counted_attendance: status === 'attended',
             },
           });
+          addedCount++;
 
           const updates = {};
           if (status === 'invited' || status === 'confirmed') updates.total_invitations = { increment: 1 };
@@ -331,12 +396,30 @@ export const addOrRemoveDonors = async (req, res, next) => {
       }
     });
 
+    const history = [];
+    if (addedCount > 0) {
+      history.push(recordEditHistory({
+        event_id,
+        editor_id: req.user.id,
+        edit_type: 'donor_added_bulk',
+        new_value: `${addedCount} donors added`,
+      }, prisma));
+    }
+    if (removedCount > 0) {
+      history.push(recordEditHistory({
+        event_id,
+        editor_id: req.user.id,
+        edit_type: 'donor_removed_bulk',
+        old_value: `${removedCount} donors removed`,
+      }, prisma));
+    }
+    await Promise.all(history);
+
     res.status(200).json({ success: true, message: 'Donors updated' });
   } catch (err) {
     next(err);
   }
 };
-
 
 export const getCollaborators = async (req, res, next) => {
   const { id } = req.params;
@@ -363,7 +446,6 @@ export const getCollaborators = async (req, res, next) => {
   }
 };
 
-
 export const updateCollaborators = async (req, res, next) => {
   const { id: eventId } = req.params;
   const { addIds = [], removeIds = [] } = req.body;
@@ -375,37 +457,73 @@ export const updateCollaborators = async (req, res, next) => {
       return res.status(403).json({ message: "Only the event owner can update collaborators." });
     }
 
-    // Prevent adding or removing yourself
     if (removeIds.includes(req.user.id) || addIds.includes(req.user.id)) {
       return res.status(400).json({ message: "You cannot add or remove yourself." });
     }
 
-    //Add collaborators (skip if already exists)
-    for (const userId of addIds) {
-      await prisma.eventCollaborator.upsert({
-        where: {
-          eventId_userId: { eventId, userId },
-        },
-        update: {},
-        create: {
-          eventId,
-          userId,
-        },
-      });
-    }
+    await prisma.$transaction(async (tx) => {
+      for (const userId of addIds) {
+        await tx.eventCollaborator.upsert({
+          where: { eventId_userId: { eventId, userId } },
+          update: {},
+          create: { eventId, userId },
+        });
 
-    // Remove collaborators
-    if (removeIds.length > 0) {
-      await prisma.eventCollaborator.deleteMany({
-        where: {
-          eventId,
-          userId: { in: removeIds },
-        },
-      });
-    }
+        await recordEditHistory({
+          event_id: eventId,
+          editor_id: req.user.id,
+          edit_type: 'collaborator_added',
+          new_value: userId.toString(),
+        }, tx);
+      }
+
+      if (removeIds.length > 0) {
+        await tx.eventCollaborator.deleteMany({
+          where: { eventId, userId: { in: removeIds } },
+        });
+
+        for (const userId of removeIds) {
+          await recordEditHistory({
+            event_id: eventId,
+            editor_id: req.user.id,
+            edit_type: 'collaborator_removed',
+            old_value: userId.toString(),
+          }, tx);
+        }
+      }
+    });
 
     res.status(200).json({ message: "Collaborators updated." });
   } catch (err) {
     next(err);
   }
 };
+
+export const getEventHistory = async (req, res, next) => {
+  const { id } = req.params;
+
+  try {
+    const history = await prisma.eventEditHistory.findMany({
+      where: { event_id: id },
+      orderBy: { created_at: 'desc' },
+      include: {
+        editor: {
+          select: {
+            id: true,
+            username: true,
+            avatar: true,
+          },
+        },
+      },
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Event edit history fetched successfully',
+      history,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+

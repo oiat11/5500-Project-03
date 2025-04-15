@@ -23,6 +23,7 @@ model User {
   createdAt DateTime @default(now())
   events    Event[] @relation("UserCreatedEvents")
   collaborators     EventCollaborator[]
+  editHistories   EventEditHistory[]  @relation("EditorHistory")
 }
 
 model Tag {
@@ -133,6 +134,7 @@ model Event {
   capacity Int?
   donors      DonorEvent[]
   tags        Tag[]       @relation("EventTags")
+  editHistory  EventEditHistory[] 
   is_deleted  Boolean     @default(false)
   deleted_at  DateTime?
   created_at  DateTime    @default(now())
@@ -172,6 +174,26 @@ model DonorEvent {
   @@index([donor_id])
   @@index([event_id])
 }
+
+model EventEditHistory {
+  id           String   @id @default(uuid())
+  event        Event    @relation(fields: [event_id], references: [id], onDelete: Cascade)
+  event_id     String
+
+  editor       User?    @relation("EditorHistory", fields: [editor_id], references: [id])
+  editor_id    Int?
+
+  edit_type    String
+  old_value    String?  @db.Text
+  new_value    String?  @db.Text
+
+  created_at   DateTime @default(now())
+
+  @@index([event_id])
+  @@index([editor_id])
+  @@map("Event_Edit_History")
+}
+
 
 
 enum ParticipationStatus {
