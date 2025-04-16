@@ -1,4 +1,4 @@
-// AddDonorsModal.jsx
+// AddDonorsModal.jsx (with capacity info and warnings like CreateEvent)
 import React, { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -11,20 +11,23 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/toast";
-import { Card, CardContent } from "@/components/ui/card";
-
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import DonorSelection from "@/components/DonorSelection";
 import CurrentDonorsList from "@/components/CurrentDonorsList";
+import ConfirmDialog from "@/components/ui/confirm-dialog";
 
 export default function AddDonorsModal({
   isOpen,
   onClose,
   onAddDonors,
   existingDonors = [],
+  capacity = null,
 }) {
   const { toast } = useToast();
   const [selectedDonors, setSelectedDonors] = useState([]);
   const [removedExistingDonors, setRemovedExistingDonors] = useState([]);
+  const [showOverCapacityDialog, setShowOverCapacityDialog] = useState(false);
+  const [pendingSubmit, setPendingSubmit] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -42,20 +45,20 @@ export default function AddDonorsModal({
   };
 
   const handleSubmit = () => {
-    const donorsToAdd = selectedDonors;
-    const donorsToRemove = removedExistingDonors;
-
-    if (donorsToAdd.length === 0 && donorsToRemove.length === 0) {
-      toast({
-        title: "No changes made",
-        description: "Please add or remove donors before submitting",
-        variant: "destructive",
-      });
+    const totalSelected = selectedDonors.length + existingDonors.length - removedExistingDonors.length;
+    if (capacity && totalSelected > capacity) {
+      setShowOverCapacityDialog(true);
+      setPendingSubmit(true);
       return;
     }
+    submitChanges();
+  };
 
-    onAddDonors(donorsToAdd, donorsToRemove);
+  const submitChanges = () => {
+    onAddDonors(selectedDonors, removedExistingDonors);
     onClose();
+    setPendingSubmit(false);
+    setShowOverCapacityDialog(false);
   };
 
   const clearAll = () => {
@@ -65,11 +68,10 @@ export default function AddDonorsModal({
   };
 
   const formattedExistingDonors = existingDonors
-    .map((donor) => ({
-      ...donor,
-      isExisting: true,
-    }))
+    .map((donor) => ({ ...donor, isExisting: true }))
     .filter((donor) => !removedExistingDonors.includes(donor.id));
+
+  const totalSelected = selectedDonors.length + formattedExistingDonors.length;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -85,33 +87,40 @@ export default function AddDonorsModal({
 
         <div className="p-4 pt-2 overflow-y-auto flex-grow">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <DonorSelection
-              selectedDonors={selectedDonors}
-              onChange={setSelectedDonors}
-              excludeDonors={[...selectedDonors, ...formattedExistingDonors]}
-            />
+            <div className="space-y-2">
+              {capacity && totalSelected > capacity && (
+                <div className="p-2 rounded-md bg-yellow-100 text-yellow-800 border border-yellow-300 text-sm">
+                  ⚠️ You have selected <strong>{totalSelected}</strong> donors, which exceeds the event capacity of <strong>{capacity}</strong>.
+                </div>
+              )}
+              {capacity && (
+                <div className="text-sm text-muted-foreground">
+                  Selected <strong>{totalSelected}</strong> out of <strong>{capacity}</strong> donors
+                </div>
+              )}
+
+              <DonorSelection
+                selectedDonors={selectedDonors}
+                onChange={setSelectedDonors}
+                excludeDonors={[...selectedDonors, ...formattedExistingDonors]}
+              />
+            </div>
 
             <div>
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-base font-semibold">
-                  Selected Donors (
-                  {selectedDonors.length + formattedExistingDonors.length})
-                </h3>
-                {(selectedDonors.length > 0 ||
-                  removedExistingDonors.length > 0) && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={clearAll}
-                  >
-                    Reset Changes
-                  </Button>
-                )}
-              </div>
-
               <Card>
-                <CardContent className="p-3">
+                <CardHeader className="pb-2">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-base font-semibold">
+                      Selected Donors ({totalSelected})
+                    </CardTitle>
+                    {(selectedDonors.length > 0 || removedExistingDonors.length > 0) && (
+                      <Button type="button" variant="outline" size="sm" onClick={clearAll}>
+                        Reset Changes
+                      </Button>
+                    )}
+                  </div>
+                </CardHeader>
+                <CardContent className="p-3 pt-0">
                   <CurrentDonorsList
                     donors={[...selectedDonors, ...formattedExistingDonors]}
                     onRemove={(donor) => {
@@ -126,8 +135,7 @@ export default function AddDonorsModal({
 
                   {removedExistingDonors.length > 0 && (
                     <div className="mt-4 text-sm text-red-500">
-                      {removedExistingDonors.length} donor(s) will be removed
-                      from the event
+                      {removedExistingDonors.length} donor(s) will be removed from the event
                     </div>
                   )}
                 </CardContent>
@@ -142,13 +150,21 @@ export default function AddDonorsModal({
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={
-              selectedDonors.length === 0 && removedExistingDonors.length === 0
-            }
+            disabled={selectedDonors.length === 0 && removedExistingDonors.length === 0}
           >
             Save Changes
           </Button>
         </DialogFooter>
+
+        <ConfirmDialog
+          open={showOverCapacityDialog}
+          onCancel={() => setShowOverCapacityDialog(false)}
+          onConfirm={submitChanges}
+          title="Exceeds Capacity"
+          description={`You have selected ${totalSelected} donors, which exceeds the event capacity of ${capacity}. Are you sure you want to continue?`}
+          confirmLabel="Continue & Save"
+          cancelLabel="Cancel"
+        />
       </DialogContent>
     </Dialog>
   );

@@ -874,6 +874,7 @@ export default function EventDetails() {
           id: d.donor_id,
           ...d.donor,
         }))}
+        capacity={event.capacity}
       />
       <AddCollaboratorModal
         open={showAddCollaborator}
