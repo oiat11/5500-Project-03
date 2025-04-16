@@ -16,11 +16,14 @@ datasource db {
 
 model User {
   id        Int     @id @default(autoincrement())
-  username      String
+  username  String
   email     String  @unique
   password  String
-  avatar  String? 
+  avatar    String?
   createdAt DateTime @default(now())
+  events    Event[] @relation("UserCreatedEvents")
+  collaborators     EventCollaborator[]
+  editHistories   EventEditHistory[]  @relation("EditorHistory")
 }
 
 model Tag {
@@ -128,17 +131,30 @@ model Event {
   date        DateTime?
   location    String?     @db.Text
   status      EventStatus @default(draft)
-  donor_count Int?
+  capacity Int?
   donors      DonorEvent[]
   tags        Tag[]       @relation("EventTags")
+  editHistory  EventEditHistory[] 
   is_deleted  Boolean     @default(false)
   deleted_at  DateTime?
   created_at  DateTime    @default(now())
   updated_at  DateTime    @updatedAt
-  created_by  String?
+  created_by  Int?
+  createdBy   User?       @relation("UserCreatedEvents", fields: [created_by], references: [id])
+  collaborators  EventCollaborator[]
 
   @@map("Event")
   @@index([date])
+}
+
+model EventCollaborator {
+  id        Int     @id @default(autoincrement())
+  event     Event   @relation(fields: [eventId], references: [id])
+  eventId   String
+  user      User    @relation(fields: [userId], references: [id])
+  userId    Int
+
+  @@unique([eventId, userId])
 }
 
 model DonorEvent {
@@ -151,6 +167,7 @@ model DonorEvent {
   status     ParticipationStatus?
   counted_invitation Boolean @default(false)
   counted_attendance Boolean @default(false)
+  decline_reason String? @db.Text 
   created_at DateTime @default(now())
 
   @@id([donor_id, event_id])
@@ -158,6 +175,28 @@ model DonorEvent {
   @@index([donor_id])
   @@index([event_id])
 }
+
+model EventEditHistory {
+  id           String   @id @default(uuid())
+  event        Event    @relation(fields: [event_id], references: [id], onDelete: Cascade)
+  event_id     String
+
+  editor       User?    @relation("EditorHistory", fields: [editor_id], references: [id])
+  editor_id    Int?
+
+  edit_type    String
+  old_value    String?  @db.Text
+  new_value    String?  @db.Text
+
+  meta         Json?
+  created_at   DateTime @default(now())
+
+  @@index([event_id])
+  @@index([editor_id])
+  @@map("Event_Edit_History")
+}
+
+
 
 
 enum ParticipationStatus {

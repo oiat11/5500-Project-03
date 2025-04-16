@@ -32,23 +32,53 @@ export const verifyEventOwnership = async (req, res, next) => {
     const event = await prisma.event.findUnique({
       where: { id }
     });
-    
+
     if (!event) {
       return res.status(404).json({
         success: false,
         message: 'Event not found'
       });
     }
-    
-    if (event.created_by !== String(req.user.id)) {
+    if (event.created_by !== Number(req.user.id)) {
       return res.status(403).json({
         success: false,
         message: 'You do not have permission to modify this event'
       });
     }
-    
+
     next();
   } catch (err) {
     next(err);
+  }
+};
+
+export const verifyEventEditor = async (req, res, next) => {
+  const { id: eventId } = req.params;
+  const userId = req.user?.id;
+
+  try {
+    const event = await prisma.event.findUnique({
+      where: { id: eventId }, // <-- 使用字符串 ID，不要 parseInt
+      include: {
+        collaborators: {
+          where: { userId },
+        },
+      },
+    });
+
+    if (!event) {
+      return res.status(404).json({ message: "Event not found" });
+    }
+
+    const isOwner = event.created_by === userId;
+    const isCollaborator = event.collaborators.length > 0;
+
+    if (isOwner || isCollaborator) {
+      return next();
+    }
+
+    return res.status(403).json({ message: "You are not allowed to edit this event." });
+  } catch (err) {
+    return next(err);
   }
 };

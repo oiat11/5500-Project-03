@@ -12,14 +12,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-export default function EditEventDetailsModal({ open, onClose, eventData, onSave }) {
+export default function EditEventDetailsModal({
+  open,
+  onClose,
+  eventData,
+  onSave,
+}) {
   const { toast } = useToast();
   const [formData, setFormData] = useState({
     name: "",
@@ -27,7 +27,9 @@ export default function EditEventDetailsModal({ open, onClose, eventData, onSave
     location: "",
     description: "",
     status: "draft",
+    capacity: "",
   });
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (eventData) {
@@ -37,14 +39,16 @@ export default function EditEventDetailsModal({ open, onClose, eventData, onSave
         location: eventData.location || "",
         description: eventData.description || "",
         status: eventData.status || "draft",
+        capacity: eventData.capacity?.toString() || "",
       });
     }
   }, [eventData]);
 
   const handleSave = async () => {
     try {
+      setSaving(true);
       const fixedDate = new Date(`${formData.date}T12:00:00`);
-  
+
       const res = await fetch(`/api/event/${eventData.id}/info`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -54,14 +58,18 @@ export default function EditEventDetailsModal({ open, onClose, eventData, onSave
           date: fixedDate.toISOString(),
           location: formData.location,
           status: formData.status,
+          capacity: formData.capacity ? parseInt(formData.capacity) : null,
           tagIds: formData.tags?.map((tag) => tag.value) || [],
         }),
       });
-  
+
       if (!res.ok) throw new Error("Update failed");
-  
-      toast({ title: "Success", description: "Event details updated successfully" });
-  
+
+      toast({
+        title: "Success",
+        description: "Event details updated successfully",
+      });
+
       if (onSave) onSave();
       onClose();
     } catch (err) {
@@ -71,9 +79,11 @@ export default function EditEventDetailsModal({ open, onClose, eventData, onSave
         description: "Failed to update event details",
         variant: "destructive",
       });
+    } finally {
+      setSaving(false);
     }
   };
-  
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-xl" hideCloseButton>
@@ -83,13 +93,12 @@ export default function EditEventDetailsModal({ open, onClose, eventData, onSave
           </CardHeader>
           <CardContent className="space-y-6">
             <p className="text-sm text-muted-foreground italic">
-              Fields marked with <span className="text-red-500">*</span> are required.
+              Fields marked with <span className="text-red-500">*</span> are
+              required.
             </p>
 
             <div className="space-y-2">
-              <Label htmlFor="name" className="mb-1 block">
-                Name <span className="text-red-500">*</span>
-              </Label>
+              <Label htmlFor="name">Name <span className="text-red-500">*</span></Label>
               <Input
                 id="name"
                 value={formData.name}
@@ -99,7 +108,7 @@ export default function EditEventDetailsModal({ open, onClose, eventData, onSave
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="description" className="mb-1 block">Description</Label>
+              <Label htmlFor="description">Description</Label>
               <Textarea
                 id="description"
                 value={formData.description}
@@ -108,9 +117,7 @@ export default function EditEventDetailsModal({ open, onClose, eventData, onSave
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="date" className="mb-1 block">
-                Date <span className="text-red-500">*</span>
-              </Label>
+              <Label htmlFor="date">Date <span className="text-red-500">*</span></Label>
               <Input
                 type="date"
                 id="date"
@@ -121,9 +128,7 @@ export default function EditEventDetailsModal({ open, onClose, eventData, onSave
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="location" className="mb-1 block">
-                Location <span className="text-red-500">*</span>
-              </Label>
+              <Label htmlFor="location">Location <span className="text-red-500">*</span></Label>
               <Input
                 id="location"
                 value={formData.location}
@@ -133,7 +138,18 @@ export default function EditEventDetailsModal({ open, onClose, eventData, onSave
             </div>
 
             <div className="space-y-2">
-              <Label className="mb-1 block">Status</Label>
+              <Label htmlFor="capacity">Capacity</Label>
+              <Input
+                id="capacity"
+                type="number"
+                min={0}
+                value={formData.capacity}
+                onChange={(e) => setFormData({ ...formData, capacity: e.target.value })}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Status</Label>
               <Select
                 value={formData.status}
                 onValueChange={(val) => setFormData({ ...formData, status: val })}
@@ -152,10 +168,12 @@ export default function EditEventDetailsModal({ open, onClose, eventData, onSave
         </Card>
 
         <DialogFooter className="mt-4">
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="outline" onClick={onClose} disabled={saving}>
             Cancel
           </Button>
-          <Button onClick={handleSave}>Save Changes</Button>
+          <Button onClick={handleSave} disabled={saving}>
+            {saving ? "Saving..." : "Save Changes"}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
