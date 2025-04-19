@@ -81,12 +81,12 @@ export const updateTag = async (req, res, next) => {
   }
 };
 
-// Soft Delete Tag
+// Hard Delete Tag and Related Donor Associations
 export const deleteTag = async (req, res, next) => {
   const { id } = req.params;
 
   try {
-    // 查找标签
+    // 检查 tag 是否存在
     const existingTag = await prisma.tag.findUnique({
       where: { id },
     });
@@ -94,37 +94,32 @@ export const deleteTag = async (req, res, next) => {
     if (!existingTag) {
       return res.status(404).json({
         success: false,
-        message: "Tag not found."
+        message: "Tag not found.",
       });
     }
 
-    if (existingTag.is_deleted) {
-      return res.status(200).json({
-        success: true,
-        message: "Tag was already deleted",
-      });
-    }
-
-    // 更新标签为已删除状态
-    const deletedTag = await prisma.tag.update({
-      where: { id },
-      data: {
-        is_deleted: true,
-        deleted_at: new Date(),
+    // 删除所有 DonorTag 中的关联（中间表记录）
+    await prisma.donorTag.deleteMany({
+      where: {
+        tag_id: id,
       },
+    });
+
+    // 硬删除 tag 本体
+    await prisma.tag.delete({
+      where: { id },
     });
 
     return res.status(200).json({
       success: true,
-      message: "Tag deleted successfully",
-      tag: deletedTag,
+      message: "Tag and all related donor associations permanently deleted.",
     });
   } catch (error) {
     console.error("Error in deleteTag:", error);
     return res.status(500).json({
       success: false,
       message: "Internal server error",
-      error: error.message
+      error: error.message,
     });
   }
 };

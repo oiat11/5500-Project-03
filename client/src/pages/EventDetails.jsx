@@ -75,6 +75,7 @@ export default function EventDetails() {
 
   const [declineDialogOpen, setDeclineDialogOpen] = useState(null);
   const [declineReason, setDeclineReason] = useState("");
+  const [donorSearchTerm, setDonorSearchTerm] = useState("");
 
   const [formData, setFormData] = useState({
     donors: [],
@@ -243,7 +244,9 @@ export default function EventDetails() {
   }
 
   if (error || !event) {
+    
     return (
+      
       <div className="container max-w-7xl mx-auto py-8 px-4">
         <div className="flex justify-center items-center h-64">
           <div className="text-center">
@@ -257,6 +260,11 @@ export default function EventDetails() {
       </div>
     );
   }
+  
+  const filteredDonors = event.donors.filter((donorEvent) => {
+    const fullName = `${donorEvent.donor.first_name} ${donorEvent.donor.last_name}`.toLowerCase();
+    return fullName.includes(donorSearchTerm.toLowerCase());
+  });
 
   return (
     <div className="container max-w-7xl mx-auto py-8 px-4">
@@ -405,6 +413,16 @@ export default function EventDetails() {
                 </div>
               </CardHeader>
               <CardContent>
+              <div className="mb-4">
+  <input
+    type="text"
+    placeholder="Search donor by name..."
+    className="w-full border px-3 py-2 rounded-md text-sm"
+    value={donorSearchTerm}
+    onChange={(e) => setDonorSearchTerm(e.target.value)}
+  />
+</div>
+
                 {!event.donors || event.donors.length === 0 ? (
                   <div className="text-center py-8 text-gray-500">
                     No donors added to this event yet.
@@ -424,7 +442,7 @@ export default function EventDetails() {
                       </TableHeader>
 
                       <TableBody>
-                        {event.donors.map((donorEvent) => (
+                      {filteredDonors.map((donorEvent) => (
                           <TableRow
                             key={donorEvent.donor_id}
                             className="hover:bg-slate-50"
