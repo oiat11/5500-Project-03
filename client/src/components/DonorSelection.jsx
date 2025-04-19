@@ -172,16 +172,30 @@ export default function DonorSelection({ selectedDonors, onChange, excludeDonors
         <CardTitle>Add Donors</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="mb-5">
-          <Input
-            id="search"
-            ref={searchInputRef}
-            placeholder="Search donors..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            onKeyDown={handleKeyDown}
-          />
-        </div>
+      <div className="mb-5 flex gap-2">
+  <Input
+    id="search"
+    ref={searchInputRef}
+    placeholder="Search donors..."
+    value={searchTerm}
+    onChange={(e) => setSearchTerm(e.target.value)}
+    onKeyDown={handleKeyDown}
+    className="flex-1"
+  />
+  <Button
+    type="button"
+    variant="outline"
+    onClick={() => {
+      setSearchTerm("");
+      setFilteredDonors([]);
+      setShowDonors(false);
+    }}
+    disabled={!searchTerm}
+  >
+    Clear
+  </Button>
+</div>
+
 
         <div className="mb-6">
           <DonorFilters
