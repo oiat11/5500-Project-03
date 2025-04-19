@@ -309,6 +309,11 @@ export const updateDonorStatus = async (req, res, next) => {
       return res.status(404).json({ error: 'Donor not part of this event' });
     }
 
+    const donor = await prisma.donor.findUnique({
+      where: { id: donorId },
+      select: { first_name: true, last_name: true },
+    });
+
     const updatesToEvent = { status };
     const updatesToDonor = {};
 
@@ -332,7 +337,7 @@ export const updateDonorStatus = async (req, res, next) => {
           where: { donor_id_event_id: { donor_id: donorId, event_id } },
           data: updatesToEvent,
         }),
-    
+
         Object.keys(updatesToDonor).length > 0
           ? prisma.donor.update({
               where: { id: donorId },
@@ -341,7 +346,7 @@ export const updateDonorStatus = async (req, res, next) => {
           : undefined,
       ].filter(Boolean)
     );
-    
+
     await recordEditHistory(
       {
         event_id,
@@ -349,17 +354,20 @@ export const updateDonorStatus = async (req, res, next) => {
         edit_type: "donor_status_updated",
         old_value: existing.status,
         new_value: status,
-        meta: status === "declined" ? { declineReason } : undefined,
+        meta: {
+          donorName: `${donor.first_name} ${donor.last_name}`,
+          ...(status === "declined" && declineReason ? { declineReason } : {}),
+        },
       },
       prisma
     );
-    
 
     res.status(200).json({ success: true, message: 'Donor status updated' });
   } catch (err) {
     next(err);
   }
 };
+
 
 
 export const addOrRemoveDonors = async (req, res, next) => {

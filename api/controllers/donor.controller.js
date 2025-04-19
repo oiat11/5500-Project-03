@@ -343,17 +343,44 @@ export const getDonors = async (req, res, next) => {
         }
       : {};
 
-    // Search filter
-    let searchFilter = {};
-    if (search) {
-      searchFilter = {
-        OR: [
-          { first_name: { contains: search } },
-          { last_name: { contains: search } },
-          { organization_name: { contains: search } }
-        ]
-      };
-    }
+      let searchFilter = {};
+      if (search) {
+        const trimmedSearch = search.trim();
+        const searchParts = trimmedSearch.split(" ");
+      
+        if (searchParts.length >= 2) {
+          const [firstPart, secondPart] = searchParts;
+      
+          searchFilter = {
+            OR: [
+              { first_name: { contains: trimmedSearch } },
+              { last_name: { contains: trimmedSearch } },
+              { organization_name: { contains: trimmedSearch } },
+              {
+                AND: [
+                  { first_name: { contains: firstPart } },
+                  { last_name: { contains: secondPart } }
+                ]
+              },
+              {
+                AND: [
+                  { first_name: { contains: secondPart } },
+                  { last_name: { contains: firstPart } }
+                ]
+              }
+            ]
+          };
+        } else {
+          searchFilter = {
+            OR: [
+              { first_name: { contains: trimmedSearch } },
+              { last_name: { contains: trimmedSearch } },
+              { organization_name: { contains: trimmedSearch } }
+            ]
+          };
+        }
+      }
+      
 
     const finalWhere = {
       ...whereClause,
@@ -733,11 +760,34 @@ export const recommendDonors = async (req, res, next) => {
 
     // ✅ Name keyword search
     if (search) {
+      const trimmedSearch = search.trim();
+      const searchParts = trimmedSearch.split(" ");
+    
       whereClause.OR = [
-        { first_name: { contains: search } },
-        { last_name: { contains: search } },
+        { first_name: { contains: trimmedSearch } },
+        { last_name: { contains: trimmedSearch } },
       ];
+    
+      if (searchParts.length >= 2) {
+        const [firstPart, secondPart] = searchParts;
+    
+        whereClause.OR.push(
+          {
+            AND: [
+              { first_name: { contains: firstPart } },
+              { last_name: { contains: secondPart } }
+            ]
+          },
+          {
+            AND: [
+              { first_name: { contains: secondPart } },
+              { last_name: { contains: firstPart } }
+            ]
+          }
+        );
+      }
     }
+    
 
     // ✅ Filter by tags (optional)
     const tagsFilter = tags
