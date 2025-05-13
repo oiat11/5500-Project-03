@@ -1,7 +1,7 @@
 # BC Cancer Foundation Donor Selection System
 
-[![Demo Video](https://youtu.be/YZZVDxJAvDc)
-[![Live Demo](https://five500-project-03-1.onrender.com)
+[![Demo Video](https://img.shields.io/badge/Watch-Demo_Video-red?style=for-the-badge&logo=youtube)](https://youtu.be/YZZVDxJAvDc)
+[![Live Demo](https://img.shields.io/badge/View-Live_Demo-blue?style=for-the-badge&logo=render)](https://five500-project-03-1.onrender.com)
 
 
 ## Project Overview
