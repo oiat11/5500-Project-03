@@ -73,6 +73,52 @@ The model identifies hidden relationships within donor data to predict both atte
 5. **Collaboration**: Team-based coordination on events with edit history
 6. **Post-Event Analysis**: Measure success metrics and feed data back into the ML algorithm
 
+## Feature Showcase
+
+### Dashboard Overview
+
+### Donor Management
+![Donor Management](screenshots/donors1.png)
+![Donor Management](screenshots/donors2.png)
+Comprehensive donor management interface with filtering, sorting, and detailed donor profiles.
+
+### Create New Donor
+![Create Donor](screenshots/create_donor.png)
+Intuitive form for adding new donors with custom fields and tagging capabilities.
+
+### Tag Management
+![Tag Management](screenshots/tags.png)
+Centralized system for creating, organizing, and managing donor tags across different categories such as interests, behaviors, and demographics.
+
+### Donor Tagging Interface
+![Donor Tagging](screenshots/tags.png)
+The flexible tagging interface allows staff to categorize donors using custom tags relevant to various event types and donor characteristics.
+
+### Event Management
+![Event Management](screenshots/events.png)
+Complete event listing with status indicators, attendance metrics, and quick-action tools.
+
+### Create New Event
+![Create Event](screenshots/create_event1.png)
+![Create Event](screenshots/create_event2.png)
+Detailed event creation flow with options for venue, date, capacity, and target donor criteria.
+
+### Edit Event
+![Edit Event](screenshots/edit_events1.png)
+Comprehensive event editing capabilities with revision history and change tracking.
+
+### ML-Powered Donor Suggestions
+![ML Suggestions](screenshots/ML.png)
+Machine learning algorithms analyze past donor behavior to suggest appropriate donors for each event with priority scoring.
+
+### Add Collaborator Interface
+![Add Collaborator](screenshots/add_collaborator.png)
+Simple interface for event owners to invite team members as collaborators with appropriate permissions.
+
+### Event History & Analytics
+![Event History](screenshots/event_history.png)
+Detailed history view showing all changes, attendee responses, and performance metrics for continuous improvement.
+
 ### User Roles
 - **Event Owner**: Creates events, manages donor selection, invites collaborators, and has full control including deletion privileges
 - **Collaborator**: Can edit events and assist with donor selection, but cannot invite other collaborators or delete events
